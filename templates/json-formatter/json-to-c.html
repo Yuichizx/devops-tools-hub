@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>JSON → C# Model</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+
+  <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <style>
+    /* CSS Bridge untuk Dark Mode */
+    body {
+        background-color: var(--bg);
+        color: var(--text);
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    .main-card {
+        background-color: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+
+    /* Input & Textarea */
+    input[type="text"], select, textarea {
+        background-color: var(--bg) !important;
+        border-color: var(--border) !important;
+        color: var(--text) !important;
+    }
+    input:focus, select:focus, textarea:focus {
+        border-color: var(--btn-primary) !important;
+        box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
+        outline: none;
+    }
+
+    /* Labels */
+    label, p, h1, h2, span { color: var(--text); }
+    .text-muted-custom { color: var(--muted) !important; }
+
+    /* Buttons */
+    .btn-action {
+        background-color: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        transition: all 0.2s;
+    }
+    .btn-action:hover {
+        background-color: var(--btn-hover);
+        color: var(--text);
+    }
+    
+    /* Scrollbar */
+    textarea::-webkit-scrollbar { width: 8px; }
+    textarea::-webkit-scrollbar-track { background: var(--bg); }
+    textarea::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 4px; opacity: 0.5; }
+
+    /* Toast */
+    #toast { transition: transform .3s, opacity .3s; z-index: 50; }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 font-sans">
+  
+  <div class="container mx-auto max-w-6xl">
+    
+    <header class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-2">
+            <i class="bi bi-filetype-cs text-emerald-500"></i> JSON → C# Model
+        </h1>
+        <p class="text-muted-custom mt-1">Tempel JSON lalu generate class C# (System.Text.Json).</p>
+      </div>
+      
+            <div class="flex gap-2">
+                <button id="btnTheme" class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm">🌞 Light</button>
+                <a href="{{ url_for('routes.json_formatter_index') }}"
+                   class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+    </header>
+
+    <div class="main-card rounded-xl shadow-lg p-6 md:p-8">
+      
+      <div class="mb-6">
+        <div class="flex justify-between items-center mb-2">
+          <label for="inputJson" class="font-bold opacity-90">Input JSON</label>
+          <div class="flex gap-2">
+            <button id="btnPaste" class="btn-action w-8 h-8 flex items-center justify-center rounded" title="Paste dari Clipboard"><i class="bi bi-clipboard"></i></button>
+            <button id="btnClear" class="btn-action w-8 h-8 flex items-center justify-center rounded text-red-500 hover:text-red-600" title="Bersihkan"><i class="bi bi-x-lg"></i></button>
+          </div>
+        </div>
+        <textarea id="inputJson" placeholder='{"id":1,"name":"John Doe","items":[{"sku":"A1","qty":2}]}' class="w-full p-4 border rounded-lg min-h-[220px] font-mono text-sm"></textarea>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6 mb-6 p-4 rounded-lg border border-[var(--border)] bg-[var(--bg)]">
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block font-semibold text-sm mb-1 opacity-90">Nama Root Class</label>
+            <input id="rootName" type="text" placeholder="Misal: Root / User / Order" class="w-full p-2.5 border rounded-lg text-sm"/>
+          </div>
+          <div>
+            <label class="block font-semibold text-sm mb-1 opacity-90">Penamaan Properti (kode)</label>
+            <select id="namingCase" class="w-full p-2.5 border rounded-lg text-sm">
+              <option value="preserve">Biarkan (Sesuai JSON)</option>
+              <option value="camel">camelCase</option>
+              <option value="pascal" selected>PascalCase</option>
+              <option value="snake">snake_case</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+             <label class="block font-semibold text-sm mb-2 opacity-90">Opsi Generator</label>
+             <div class="grid grid-cols-2 gap-3 text-sm">
+                <label class="flex items-center gap-2 cursor-pointer"><input id="optInferInt" type="checkbox" class="accent-blue-600 w-4 h-4" checked/> <span class="opacity-80">Bedakan int vs double</span></label>
+                <label class="flex items-center gap-2 cursor-pointer"><input id="optDetectNull" type="checkbox" class="accent-blue-600 w-4 h-4" checked/> <span class="opacity-80">Null → nullable (?)</span></label>
+                <label class="flex items-center gap-2 cursor-pointer"><input id="optCsJsonAttr" type="checkbox" class="accent-blue-600 w-4 h-4" checked/> <span class="opacity-80">[JsonPropertyName]</span></label>
+                <label class="flex items-center gap-2 cursor-pointer"><input id="optCsNullableRef" type="checkbox" class="accent-blue-600 w-4 h-4" checked/> <span class="opacity-80">Nullable string (string?)</span></label>
+             </div>
+          </div>
+          <div>
+            <label class="block font-semibold text-sm mb-1 opacity-90">Namespace</label>
+            <input id="csNamespace" type="text" placeholder="MyApp.Models" value="MyApp.Models" class="w-full p-2.5 border rounded-lg text-sm"/>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="flex items-center justify-between mb-3">
+        <button id="btnGenerate" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 text-sm font-bold rounded-lg shadow-sm inline-flex items-center gap-2 transition transform active:scale-95">
+          <i class="bi bi-gear-wide-connected"></i> Generate C# Class
+        </button>
+        <div class="flex gap-2">
+          <button id="btnCopy" class="btn-action px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2" title="Salin"><i class="bi bi-copy"></i> Salin</button>
+          <button id="btnDownload" class="btn-action px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2" title="Unduh"><i class="bi bi-download"></i> Unduh .cs</button>
+        </div>
+      </div>
+
+      <textarea id="outputCode" readonly class="w-full p-4 border rounded-lg min-h-[320px] font-mono text-sm whitespace-pre overflow-auto"></textarea>
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0">
+    <p id="toast-message">Pesan notifikasi.</p>
+  </div>
+
+  <script>
+    // Toast Helper
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toast-message');
+    let toastTimeout;
+
+    function showToast(message, type = 'success') {
+      clearTimeout(toastTimeout);
+      toastMsg.textContent = message;
+      
+      // Reset Class
+      toast.className = 'fixed bottom-5 right-5 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-0 opacity-100';
+      
+      if(type === 'error') {
+        toast.classList.add('bg-red-600');
+      } else {
+        toast.classList.add('bg-slate-800'); // Default dark for toast
+      }
+      
+      toastTimeout = setTimeout(() => {
+        toast.className = 'fixed bottom-5 right-5 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0';
+      }, 3000);
+    }
+
+    // DOM Elements
+    const inputJson = document.getElementById('inputJson');
+    const outputCode = document.getElementById('outputCode');
+    const rootName = document.getElementById('rootName');
+    const namingCase = document.getElementById('namingCase');
+    const optInferInt = document.getElementById('optInferInt');
+    const optDetectNull = document.getElementById('optDetectNull');
+    const optCsJsonAttr = document.getElementById('optCsJsonAttr');
+    const optCsNullableRef = document.getElementById('optCsNullableRef');
+    const csNamespace = document.getElementById('csNamespace');
+
+    // Event Listeners
+    document.getElementById('btnPaste').onclick = async () => {
+       try {
+         const text = await navigator.clipboard.readText();
+         if(text){ inputJson.value = text; showToast('Teks berhasil ditempel!'); }
+         else showToast('Clipboard kosong', 'error');
+       } catch { showToast('Gagal membaca clipboard', 'error'); }
+    };
+
+    document.getElementById('btnClear').onclick = () => {
+       inputJson.value = ''; outputCode.value = ''; rootName.value = '';
+       showToast('Input dibersihkan.');
+    };
+
+    document.getElementById('btnCopy').onclick = () => {
+       if(!outputCode.value) return showToast('Tidak ada hasil untuk disalin', 'error');
+       navigator.clipboard.writeText(outputCode.value).then(() => showToast('Kode berhasil disalin!'));
+    };
+
+    document.getElementById('btnDownload').onclick = () => {
+       if(!outputCode.value) return showToast('Tidak ada hasil untuk diunduh', 'error');
+       const name = (rootName.value || 'Model').replace(/\s+/g, '');
+       const blob = new Blob([outputCode.value], {type: 'text/plain;charset=utf-8'});
+       const a = document.createElement('a');
+       a.href = URL.createObjectURL(blob);
+       a.download = `${name}.cs`;
+       a.click();
+       URL.revokeObjectURL(a.href);
+    };
+
+    // --- Logic Utilities ---
+    function cap(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
+    function normalizeTokens(s) { return String(s).replace(/[^A-Za-z0-9]+/g, ' ').replace(/([a-z0-9])([A-Z])/g, '$1 $2').trim().split(/\s+/).filter(Boolean); }
+    function toCamel(s) { const t = normalizeTokens(s); return t.map((x, i) => i ? cap(x) : x.toLowerCase()).join(''); }
+    function toPascal(s) { return normalizeTokens(s).map(cap).join(''); }
+    function toSnake(s) { return normalizeTokens(s).map(x => x.toLowerCase()).join('_'); }
+    function formatPropName(name, style) {
+        if (style === 'camel') return toCamel(name);
+        if (style === 'pascal') return toPascal(name);
+        if (style === 'snake') return toSnake(name);
+        return name;
+    }
+    function typeName(s) { return toPascal(s || 'Root'); }
+
+    // --- C# Generator Engine ---
+    function generateCs(root, data, opts) {
+      const defs = [], seen = new Map();
+
+      function sigOf(obj) {
+        return Object.keys(obj).sort().map(k => `${k}:` + (obj[k] === null ? 'null' : Array.isArray(obj[k]) ? 'arr' : typeof obj[k])).join('|');
+      }
+
+      function arrayElementType(arr) {
+        for (const v of arr) { if (v !== null && v !== undefined) return v; }
+        return null;
+      }
+
+      function csTypeFrom(v, hint) {
+        if (v === null) return 'object';
+        const t = typeof v;
+        if (t === 'string') return opts.cs.nullableRef ? 'string?' : 'string';
+        if (t === 'boolean') return 'bool' + (opts.detectNull ? '?' : '');
+        if (t === 'number') { const base = Number.isInteger(v) ? 'int' : 'double'; return base + (opts.detectNull ? '?' : ''); }
+        if (Array.isArray(v)) {
+          const el = arrayElementType(v);
+          if (el === null) return 'List<object>';
+          const et = csTypeFrom(el, hint);
+          return `List<${String(et).replace(/\?$/, '')}>`;
+        }
+        if (t === 'object') {
+          const tn = typeName(hint || 'Auto');
+          return defineClass(tn, v);
+        }
+        return 'object';
+      }
+
+      function defineClass(tn, obj) {
+        const sig = sigOf(obj);
+        if (seen.has(sig)) return seen.get(sig);
+
+        let final = tn, i = 2;
+        while ([...seen.values()].includes(final)) final = `${tn}${i++}`;
+
+        const props = [];
+        for (const key of Object.keys(obj)) {
+          const raw = obj[key];
+          let typ = csTypeFrom(raw, key);
+
+          if (raw === null && opts.detectNull) {
+            if (/^List<.+>$/.test(typ)) typ += '?';
+            else if (typ === 'string') typ = 'string?';
+            else if (/^(int|double|bool|long|decimal|float|short|byte)(\?)?$/.test(typ)) typ = typ.replace(/\?*$/, '?');
+          }
+
+          const codeName = toPascal(formatPropName(key, opts.namingCase));
+          const attr = opts.cs.jsonAttr ? `        [JsonPropertyName("${key}")]` : '';
+          
+          props.push(attr ? `${attr}\n        public ${typ} ${codeName} { get; set; }` : `        public ${typ} ${codeName} { get; set; }`);
+        }
+
+        const classDef = `    public class ${final}\n    {\n${props.join('\n')}\n    }`;
+        defs.push(classDef);
+        seen.set(sig, final);
+        return final;
+      }
+
+      const header = `using System;\nusing System.Collections.Generic;\nusing System.Text.Json.Serialization;\n\nnamespace ${opts.ns}\n{`;
+      const footer = `\n}`;
+
+      if (Array.isArray(data)) {
+        const el = arrayElementType(data);
+        if (el && typeof el === 'object') { defineClass(root + 'Item', el); } 
+        else { 
+            const t = el ? csTypeFrom(el, root + 'Item').replace(/\?$/, '') : 'object'; 
+            defs.unshift(`    // Root is List<${t}>`); 
+        }
+      } else if (typeof data === 'object' && data !== null) {
+        defineClass(root, data);
+      } else {
+        defs.unshift(`    // Root is primitive: ${csTypeFrom(data, root)}`);
+      }
+
+      return `${header}\n${defs.join('\n\n')}${footer}`;
+    }
+
+    document.getElementById('btnGenerate').onclick = () => {
+      if (!inputJson.value.trim()) return showToast('Input JSON tidak boleh kosong', 'error');
+      
+      let data; 
+      try { data = JSON.parse(inputJson.value); } 
+      catch { return showToast('JSON tidak valid', 'error'); }
+      
+      const root = typeName(rootName.value || 'Root');
+      const opts = {
+        namingCase: namingCase.value,
+        inferInt: optInferInt.checked,
+        detectNull: optDetectNull.checked,
+        cs: {
+          jsonAttr: optCsJsonAttr.checked,
+          nullableRef: optCsNullableRef.checked
+        },
+        ns: (csNamespace.value || 'MyApp.Models').trim() || 'MyApp.Models'
+      };
+
+      try {
+          outputCode.value = generateCs(root, data, opts);
+          showToast('Model C# Berhasil dibuat!');
+      } catch (e) {
+          showToast('Terjadi kesalahan saat generate', 'error');
+          console.error(e);
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>SQL Formatter & Minifier</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <style>
+    body { background-color: var(--bg); color: var(--text); transition: .3s; }
+    .main-card { background-color: var(--panel); border: 1px solid var(--border); color: var(--text); }
+    textarea { 
+        background-color: var(--bg) !important; 
+        border: 1px solid var(--border) !important; 
+        color: var(--text) !important; 
+    }
+    textarea:focus { border-color: var(--btn-primary) !important; outline: none; }
+    .btn-tool { background-color: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .btn-tool:hover { background-color: var(--btn-hover); color: var(--text); }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 font-sans">
+  
+  <div class="container mx-auto max-w-7xl">
+    <header class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-2">
+            <i class="bi bi-file-code text-blue-600"></i> SQL Formatter
+        </h1>
+        <p class="mt-1 opacity-70">Rapikan (Beautify) atau kecilkan (Minify) query SQL Anda.</p>
+      </div>
+            <div class="flex gap-2">
+                <button id="btnTheme" class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm">🌞 Light</button>
+                <a href="{{ url_for('routes.landing') }}"
+                   class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+    </header>
+
+    <div class="main-card rounded-xl shadow-lg p-6 md:p-8">
+      
+      <div class="mb-6">
+        <div class="flex justify-between items-center mb-2">
+          <label class="font-bold opacity-90">Input SQL</label>
+          <div class="flex gap-2">
+            <button id="btnPaste" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2"><i class="bi bi-clipboard"></i> Paste</button>
+            <button id="btnReset" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+          </div>
+        </div>
+        <textarea id="sqlInput" placeholder="SELECT * FROM users WHERE id = 1 AND active = true;" class="w-full p-4 border rounded-lg min-h-[300px] font-mono text-sm"></textarea>
+      </div>
+
+      <div class="flex flex-wrap justify-center gap-4 mb-6">
+        <button id="btnBeautify" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold shadow-md hover:bg-blue-700 transition transform active:scale-95 flex items-center gap-2">
+          <i class="bi bi-stars"></i> Beautify SQL
+        </button>
+        <button id="btnMinify" class="bg-gray-600 text-white px-8 py-3 rounded-lg font-bold shadow-md hover:bg-gray-700 transition transform active:scale-95 flex items-center gap-2">
+          <i class="bi bi-compress"></i> Minify SQL
+        </button>
+        <button id="btnCopy" class="btn-tool px-8 py-3 rounded-lg font-bold shadow-sm flex items-center gap-2">
+          <i class="bi bi-copy"></i> Copy Result
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all">
+    <p id="toast-message">Pesan notifikasi.</p>
+  </div>
+
+  <script>
+    const sqlInput = document.getElementById('sqlInput');
+    const toast = document.getElementById('toast'), toastMsg = document.getElementById('toast-message');
+
+    function showToast(m){ 
+        toastMsg.textContent=m; 
+        toast.className = 'fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-0 opacity-100'; 
+        setTimeout(() => toast.className = 'fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0', 2000); 
+    }
+
+    // --- Simple SQL Formatter Logic ---
+    // In production, you might want to use a library like 'sql-formatter', 
+    // but for this lite version we use a regex-based approach.
+
+    function beautifySQL(sql) {
+        if (!sql.trim()) return "";
+        
+        const keywords = ["SELECT", "FROM", "WHERE", "AND", "OR", "GROUP BY", "ORDER BY", "LIMIT", "INSERT INTO", "VALUES", "UPDATE", "SET", "DELETE", "JOIN", "LEFT JOIN", "RIGHT JOIN", "INNER JOIN", "ON", "HAVING"];
+        
+        let formatted = sql.replace(/\s+/g, " ").trim();
+        
+        keywords.forEach(key => {
+            const regex = new RegExp(`\b${key}\b`, "gi");
+            formatted = formatted.replace(regex, `\n${key.toUpperCase()}`);
+        });
+
+        // Clean up double newlines and fix indentation
+        return formatted.split('\n').map(line => line.trim()).filter(line => line.length > 0).join('\n').replace(/^\s+/gm, '');
+    }
+
+    function minifySQL(sql) {
+        return sql.replace(/\s+/g, " ").trim();
+    }
+
+    document.getElementById('btnBeautify').onclick = () => {
+        const result = beautifySQL(sqlInput.value);
+        if(result) {
+            sqlInput.value = result;
+            showToast('SQL dirapikan!');
+        }
+    };
+
+    document.getElementById('btnMinify').onclick = () => {
+        const result = minifySQL(sqlInput.value);
+        if(result) {
+            sqlInput.value = result;
+            showToast('SQL dikecilkan!');
+        }
+    };
+
+    document.getElementById('btnPaste').onclick = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if(text) {
+                sqlInput.value = text;
+                showToast('Ditempel!');
+            }
+        } catch(e) {}
+    };
+
+    document.getElementById('btnReset').onclick = () => { sqlInput.value = ''; };
+    
+    document.getElementById('btnCopy').onclick = () => {
+        if(!sqlInput.value) return;
+        navigator.clipboard.writeText(sqlInput.value).then(() => showToast('Disalin!'));
+    };
+  </script>
+</body>
+</html>

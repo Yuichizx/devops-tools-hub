@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>GitHub Access Management</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/github-access-theme.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    
+    <style>
+        body { padding-top: 56px; }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="github-access-page">
+    <nav class="navbar navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('routes.landing') }}">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" height="30" class="me-2">
+                GitHub Access Form
+            </a>
+        </div>
+    </nav>
+
+    <main class="container mt-4 pt-4">
+        <a href="{{ url_for('routes.landing') }}" class="btn btn-secondary mb-4"><i class="bi bi-arrow-left me-1"></i> Back</a>
+
+        <div class="card shadow-sm mb-5">
+            <div class="card-body p-4">
+                <h3 class="card-title mb-2"><i class="bi bi-person-lines-fill me-2"></i> GitHub Access Form</h3>
+                <p class="text-muted mb-4">Invite a GitHub user to one or more repositories within your organization.</p>
+
+                <form id="githubAccessForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                    <div class="mb-3">
+                        <label for="github_identifier" class="form-label">GitHub Username <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="github_identifier" name="github_identifier" placeholder="Enter GitHub username" required>
+                        <div class="form-text">Masukkan satu username GitHub yang valid tanpa tanda '@'.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="repositories" class="form-label">Repository Names <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="repositories" name="repositories" rows="4" placeholder="e.g. repo1, https://github.com/org/repo2" required></textarea>
+                        <div class="form-text">Anda bisa memasukkan beberapa repositori sekaligus. Pisahkan setiap nama repo dengan baris baru atau koma (,).</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="organization" class="form-label">Organization <span class="text-danger">*</span></label>
+                        <select class="form-select" id="organization" name="organization" required>
+                            <option value="">-- Select Organization --</option>
+                            <option value="bank-raya">Bank-Raya</option>
+                        </select>
+                    </div>
+                    
+                    <hr class="my-4">
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="accessMode" class="form-label fw-bold">Access Mode</label>
+                            <select class="form-select" id="accessMode" name="mode">
+                                <option value="bulk" selected>Bulk Change Role</option>
+                                <option value="edit_per_repo">Edit Role per Repo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="accessRoleContainer">
+                            <label for="accessRole" class="form-label fw-bold">Access Role to Apply</label>
+                            <select class="form-select" id="accessRole" name="accessRole">
+                                <option value="read">Read</option>
+                                <option value="triage">Triage</option>
+                                <option value="write">Write</option>
+                                <option value="maintain">Maintain</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" id="submitButton" class="btn btn-primary btn-lg">
+                            <i class="bi bi-send-fill me-1"></i> Next
+                        </button>
+                    </div>
+                </form>
+
+                <div id="resultCard" class="card mt-4 d-none">
+                    <div class="card-body">
+                        <h5 class="card-title">Submission Result</h5>
+                        <ul id="resultList" class="list-unstyled mb-0"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationModalLabel">Konfirmasi Aksi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="confirmationModalBody">
+                    Apakah Anda yakin ingin memberikan role?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tidak</button>
+                    <button type="button" class="btn btn-primary" id="confirmSubmitBtn">Ya, Lanjutkan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('githubAccessForm');
+            const accessModeSelect = document.getElementById('accessMode');
+            const accessRoleContainer = document.getElementById('accessRoleContainer');
+            const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+            const confirmSubmitBtn = document.getElementById('confirmSubmitBtn');
+
+            function toggleMode() {
+                if (accessModeSelect.value === 'bulk') {
+                    accessRoleContainer.classList.remove('d-none');
+                    form.action = "{{ url_for('routes.github_access_submit') }}";
+                } else {
+                    accessRoleContainer.classList.add('d-none');
+                    form.action = "{{ url_for('routes.github_access_edit_page') }}"; 
+                }
+            }
+
+            accessModeSelect.addEventListener('change', toggleMode);
+            toggleMode();
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (accessModeSelect.value === 'bulk') {
+                    const role = document.getElementById('accessRole').options[document.getElementById('accessRole').selectedIndex].text;
+                    document.getElementById('confirmationModalBody').textContent = `Apakah Anda yakin ingin memberikan role "${role}" ke semua repositori yang dimasukkan?`;
+                    confirmationModal.show();
+                } else {
+                    form.submit();
+                }
+            });
+
+            confirmSubmitBtn.addEventListener('click', () => {
+                confirmationModal.hide();
+                handleBulkSubmit();
+            });
+
+            async function handleBulkSubmit() {
+                const btn = document.getElementById('submitButton');
+                const resultCard = document.getElementById('resultCard');
+                const resultList = document.getElementById('resultList');
+                const data = new FormData(form);
+
+                btn.disabled = true;
+                btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...`;
+                
+                try {
+                    const response = await fetch(form.action, { method: 'POST', body: data });
+                    const json = await response.json();
+                    
+                    resultList.innerHTML = '';
+                    resultCard.classList.remove('d-none');
+
+                    if (json.success && json.github_response) {
+                        json.github_response.forEach(r => {
+                            const li = document.createElement('li');
+                            li.className = 'p-2 border-bottom';
+                            let icon = 'bi-info-circle-fill text-secondary';
+                            let msg = r.message;
+
+                            if (r.status === 'invited' || r.status === 'updated') {
+                                icon = 'bi-check-circle-fill text-success';
+                                msg = `${r.message} (Role: ${r.role?.toUpperCase() || '-'})`;
+                            } else if (r.status === 'skipped') {
+                                icon = 'bi-skip-forward-circle-fill text-info';
+                                msg = 'Sudah memiliki akses atau undangan tertunda.';
+                            } else if (r.status === 'not_found') {
+                                icon = 'bi-x-circle-fill text-danger';
+                                msg = 'Repository tidak ditemukan.';
+                            } else if (r.status === 'failed') {
+                                icon = 'bi-x-circle-fill text-danger';
+                            }
+                            
+                            li.innerHTML = `<div class="d-flex align-items-center"><i class="bi ${icon} me-3"></i><div><strong>${r.repo}</strong>: ${msg}</div></div>`;
+                            resultList.appendChild(li);
+                        });
+                    } else {
+                        resultList.innerHTML = `<li class="text-danger p-2">${json.error || 'Terjadi kesalahan.'}</li>`;
+                    }
+                } catch (err) {
+                    console.error(err);
+                    resultList.innerHTML = `<li class="text-danger p-2">Terjadi kesalahan tak terduga.</li>`;
+                    resultCard.classList.remove('d-none');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="bi bi-send-fill me-1"></i> Next`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

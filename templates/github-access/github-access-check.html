@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GitHub Role Checker</title>
+  <link rel="icon" type="image/png"
+        href="{{ url_for('static', filename='images/favicon.png') }}">
+
+  <!-- Bootstrap CSS & Icons -->
+  <link 
+    href="{{ url_for('static', filename='css/bootstrap.min.css') }}" 
+    rel="stylesheet" />
+  <link
+    href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/github-access-theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <style>
+    body {
+      padding-top: 56px; /* ruang untuk navbar fixed-top */
+    }
+  </style>
+</head>
+<body class="github-access-page">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-dark bg-dark fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand d-flex align-items-center"
+         href="{{ url_for('routes.landing') }}">
+        <img src="{{ url_for('static', filename='images/logo.png') }}"
+             alt="Logo" height="30" class="me-2">
+        DevOps Tools Hub
+      </a>
+    </div>
+  </nav>
+
+  <main class="container">
+
+    <!-- Card wrapper dengan margin top/bottom -->
+    <div class="card mx-auto shadow-sm mt-5 mb-5" style="max-width:800px;">
+      <div class="card-body">
+
+        <!-- Back Button inside card -->
+        <a href="{{ url_for('routes.landing') }}"
+           class="btn btn-secondary mb-4">
+          <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+
+        <!-- Title & Description -->
+        <h3 class="card-title mb-2">
+          <i class="bi bi-search me-2"></i>
+          GitHub Role Checker
+        </h3>
+        <p class="text-muted mb-4">
+          Cek peran (role) seorang user di repository atau team dalam organisasi Anda.
+        </p>
+
+        <!-- Form -->
+        <form action="{{ url_for('routes.github_access_check') }}"
+              method="POST">
+          <input type="hidden" name="csrf_token"
+                 value="{{ csrf_token() }}"/>
+
+          <!-- GitHub Username -->
+          <div class="mb-3">
+            <label for="username" class="form-label">GitHub Username</label>
+            <input type="text" class="form-control" id="username"
+                   name="username" required>
+          </div>
+
+          <!-- Organization -->
+          <div class="mb-3">
+            <label for="organization" class="form-label">Organization</label>
+            <input type="text" class="form-control" id="organization"
+                   name="organization" value="Bank-Raya" required>
+          </div>
+
+          <!-- Mode Pengecekan -->
+          <div class="mb-3">
+            <label class="form-label">Mode Pengecekan</label>
+            <div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio"
+                       name="mode" id="mode_all" value="all" checked>
+                <label class="form-check-label" for="mode_all">
+                  Semua Repository
+                </label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio"
+                       name="mode" id="mode_team" value="team">
+                <label class="form-check-label" for="mode_team">
+                  Berdasarkan Team
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Team Slug (dynamic) -->
+          <div class="mb-3 d-none" id="team_slug_container">
+            <label class="form-label">Team Slug</label>
+            <div id="team_slug_list" class="mb-2">
+              <p class="text-muted small">Sedang memuat daftar tim...</p>
+            </div>
+            <div class="form-text">
+              Pilih satu atau lebih tim dari daftar di atas
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="d-grid mt-4">
+            <button type="submit" id="submitButton"
+                    class="btn btn-primary btn-lg">
+              <i class="bi bi-search me-1"></i> Cek Akses
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Bootstrap JS bundle -->
+  <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+
+  <!-- Toggle Team & Submit Script -->
+  <script>
+    const modeAll       = document.getElementById('mode_all'),
+          modeTeam      = document.getElementById('mode_team'),
+          teamContainer = document.getElementById('team_slug_container'),
+          teamList      = document.getElementById('team_slug_list'),
+          orgInput      = document.getElementById('organization'),
+          form          = document.querySelector('form'),
+          btn           = document.getElementById('submitButton');
+
+    function toggleTeamInput() {
+      if (modeTeam.checked) {
+        teamContainer.classList.remove('d-none');
+        loadTeams();
+      } else {
+        teamContainer.classList.add('d-none');
+        teamList.innerHTML = '';
+      }
+    }
+
+    async function loadTeams() {
+      const org = orgInput.value.trim();
+      if (!org) return;
+      try {
+        const res = await fetch(`/github-teams?org=${org}`);
+        const teams = await res.json();
+        teamList.innerHTML = '';
+        if (Array.isArray(teams)) {
+          teams.forEach(t => {
+            const div = document.createElement('div');
+            div.className = 'form-check';
+            div.innerHTML = `
+              <input class="form-check-input" type="checkbox"
+                     name="team_slug" value="${t.slug}"
+                     id="team_${t.slug}">
+              <label class="form-check-label"
+                     for="team_${t.slug}">${t.name}</label>
+            `;
+            teamList.append(div);
+          });
+        } else {
+          teamList.innerHTML = `<p class="text-danger small">Gagal memuat tim.</p>`;
+        }
+      } catch {
+        teamList.innerHTML = `<p class="text-danger small">Error saat mengambil tim.</p>`;
+      }
+    }
+
+    modeAll.addEventListener('change', toggleTeamInput);
+    modeTeam.addEventListener('change', toggleTeamInput);
+    document.addEventListener('DOMContentLoaded', toggleTeamInput);
+
+    form.addEventListener('submit', () => {
+      btn.disabled = true;
+      btn.innerHTML = `
+        <span class="spinner-border spinner-border-sm"></span>
+        Sedang memproses...
+      `;
+    });
+  </script>
+
+</body>
+</html>

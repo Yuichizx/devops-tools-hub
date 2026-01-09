@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ config.APP_TITLE }}</title>
+  
+  <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+  
+  <link rel="icon" type="image/png" href="{{ config.APP_FAVICON }}">
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <style>
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      transition: background-color 0.3s, color 0.3s;
+    }
+    
+    /* Styling Kartu agar mengikuti tema */
+    .tool-card {
+      background-color: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .tool-card h3 { color: var(--text); }
+    .tool-card p { color: var(--muted); }
+
+    .theme-toggle-wrapper {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      z-index: 50;
+    }
+
+    /* Filter Active State */
+    .filter-btn.active {
+      background-color: #0ea5e9; /* Sky 500 */
+      color: white;
+      border-color: #0ea5e9;
+    }
+  </style>
+</head>
+<body class="min-h-screen relative font-sans">
+
+  <div class="theme-toggle-wrapper">
+    <button id="btnTheme" class="btn toggle shadow-sm">🌞 Light</button>
+  </div>
+
+  <div class="container mx-auto px-4 py-12 text-center">
+    <header class="mb-10">
+      <img src="{{ config.APP_LOGO }}"
+           alt="DevOps Logo" class="w-32 h-auto mx-auto mb-6 drop-shadow-sm">
+      <h1 class="text-3xl md:text-4xl font-extrabold mb-3 tracking-tight">{{ config.APP_TITLE }}</h1>
+      <p class="text-lg opacity-70 max-w-2xl mx-auto">{{ config.APP_DESCRIPTION }}</p>
+
+      <!-- Search & Filter Section -->
+      <div class="mt-8 max-w-xl mx-auto">
+        <div class="relative mb-6">
+          <input type="text" id="searchInput" placeholder="Search tool (e.g., pdf, json, scan)..." 
+                 class="w-full px-5 py-3 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900 focus:outline-none shadow-sm transition-all">
+          <i class="bi bi-search absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-2" id="filterContainer">
+          <button class="filter-btn active px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-sm font-medium hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" data-filter="all">All</button>
+          <button class="filter-btn px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-sm font-medium hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" data-filter="security">Security</button>
+          <button class="filter-btn px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-sm font-medium hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" data-filter="developer">Developer</button>
+          <button class="filter-btn px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-sm font-medium hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" data-filter="devops">DevOps</button>
+          <button class="filter-btn px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-sm font-medium hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" data-filter="utilities">Utilities</button>
+          <button class="filter-btn px-4 py-1.5 rounded-full border border-gray-300 dark:border-gray-600 text-sm font-medium hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" data-filter="converter">Converter</button>
+        </div>
+      </div>
+    </header>
+
+    {% from 'macros/cards.html' import tool_card %}
+
+    <div id="toolsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+      {% for tool in tools %}
+          {{ tool_card(tool) }}
+      {% endfor %}
+    </div>
+    
+    <div id="noResults" class="hidden mt-10 opacity-60">
+        <i class="bi bi-emoji-frown text-4xl mb-2 block"></i>
+        <p>No tools match your search.</p>
+    </div>
+
+  </div>
+
+  <script>
+    // Search & Filter Logic
+    const searchInput = document.getElementById('searchInput');
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const toolsGrid = document.getElementById('toolsGrid');
+    const cards = document.querySelectorAll('.tool-card');
+    const noResults = document.getElementById('noResults');
+
+    let currentFilter = 'all';
+
+    function filterTools() {
+        const query = searchInput.value.toLowerCase();
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const title = card.getAttribute('data-title');
+            const category = card.getAttribute('data-category');
+            
+            const matchesSearch = title.includes(query);
+            const matchesFilter = currentFilter === 'all' || category === currentFilter;
+
+            if (matchesSearch && matchesFilter) {
+                card.style.display = 'block';
+                // Add tiny animation class if needed
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        if (visibleCount === 0) {
+            noResults.classList.remove('hidden');
+        } else {
+            noResults.classList.add('hidden');
+        }
+    }
+
+    // Event Listeners
+    searchInput.addEventListener('input', filterTools);
+
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active class from all
+            filterBtns.forEach(b => b.classList.remove('active'));
+            // Add to clicked
+            btn.classList.add('active');
+            // Update state
+            currentFilter = btn.getAttribute('data-filter');
+            filterTools();
+        });
+    });
+  </script>
+
+</body>
+</html>

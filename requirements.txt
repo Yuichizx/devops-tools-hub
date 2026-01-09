@@ -1,0 +1,9 @@
+Flask
+python-dotenv
+waitress
+requests
+psycopg2-binary
+flask_wtf
+yamllint
+ruamel.yaml
+playwright

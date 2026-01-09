@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Encoder / Decoder</title>
+    
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+
+    <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+    <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+    <style>
+        /* CSS Bridge to Theme.css */
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .main-card {
+            background-color: var(--panel);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        /* Styling Input/Textarea */
+        textarea {
+            background-color: var(--bg) !important;
+            border-color: var(--border) !important;
+            color: var(--text) !important;
+        }
+        textarea:focus {
+            border-color: #9333ea !important; /* Purple-600 */
+            box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.2);
+            outline: none;
+        }
+
+        /* Buttons */
+        .btn-action {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            transition: 0.2s;
+        }
+        .btn-action:hover {
+            background-color: var(--btn-hover);
+            color: var(--text);
+        }
+
+        /* Icons hover colors specific for this tool */
+        .hover-purple:hover { color: #9333ea; } /* Purple */
+        .hover-red:hover { color: #dc2626; }    /* Red */
+
+        /* Label & Text */
+        label, h1, p { color: var(--text); }
+        .text-muted-custom { color: var(--muted) !important; }
+
+        /* Toast */
+        #toast { transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; z-index: 50; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 font-sans">
+
+    <div class="container mx-auto max-w-4xl">
+        
+        <header class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-2">
+                    <i class="bi bi-link-45deg text-purple-600"></i> URL Encoder / Decoder
+                </h1>
+                <p class="text-muted-custom mt-1 opacity-80">Easily encode and decode text to URL format.</p>
+            </div>
+            
+            <div class="flex gap-2">
+                <button id="btnTheme" class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm">🌞 Light</button>
+                <a href="{{ url_for('routes.landing') }}"
+                   class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+        </header>
+
+        <div class="main-card rounded-xl shadow-lg p-6 md:p-8">
+            
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label for="inputText" class="font-bold opacity-90">Input Text</label>
+                    <div class="flex gap-2">
+                        <button onclick="pasteFromClipboard()" title="Paste from Clipboard" class="btn-action w-8 h-8 flex items-center justify-center rounded hover-purple"><i class="bi bi-clipboard"></i></button>
+                        <button onclick="clearFields()" title="Clear" class="btn-action w-8 h-8 flex items-center justify-center rounded hover-red"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                </div>
+                <textarea id="inputText" placeholder="Enter text or URL here..." 
+                          class="w-full p-4 border rounded-lg text-base min-h-[200px] resize-y"></textarea>
+            </div>
+
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 my-6">
+                <button onclick="encodeURL()" 
+                        class="w-full md:w-auto flex-1 bg-purple-600 text-white px-6 py-3 text-base font-semibold rounded-lg hover:bg-purple-700 transition flex items-center justify-center gap-2 shadow-md transform active:scale-95">
+                    <i class="bi bi-lock-fill"></i> Encode
+                </button>
+                <button onclick="decodeURL()" 
+                        class="w-full md:w-auto flex-1 bg-pink-600 text-white px-6 py-3 text-base font-semibold rounded-lg hover:bg-pink-700 transition flex items-center justify-center gap-2 shadow-md transform active:scale-95">
+                    <i class="bi bi-unlock-fill"></i> Decode
+                </button>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label for="outputText" class="font-bold opacity-90">Output Result</label>
+                    <div class="flex gap-2">
+                        <button onclick="copyToClipboard()" title="Copy Result" class="btn-action px-3 py-1 rounded text-sm font-medium flex items-center gap-2 hover-purple"><i class="bi bi-copy"></i> Copy</button>
+                    </div>
+                </div>
+                <textarea id="outputText" readonly 
+                          class="w-full p-4 border rounded-lg text-base min-h-[200px] resize-y"></textarea>
+            </div>
+            
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0">
+        <p id="toast-message">Notification message.</p>
+    </div>
+
+    <script>
+        const inputText = document.getElementById("inputText");
+        const outputText = document.getElementById("outputText");
+        const toast = document.getElementById("toast");
+        const toastMessage = document.getElementById("toast-message");
+        let toastTimeout;
+
+        function showToast(message, type = 'success') {
+            clearTimeout(toastTimeout);
+            toastMessage.textContent = message;
+            
+            // Reset base class
+            toast.className = 'fixed bottom-5 right-5 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-0 opacity-100';
+            
+            if (type === 'error') {
+                toast.classList.add('bg-red-600');
+            } else {
+                toast.classList.add('bg-slate-800'); // Default dark
+            }
+
+            toastTimeout = setTimeout(() => {
+                toast.className = 'fixed bottom-5 right-5 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0';
+            }, 3000);
+        }
+
+        function encodeURL() {
+            if (!inputText.value.trim()) {
+                showToast("Input cannot be empty", "error");
+                return;
+            }
+            try {
+                const encoded = encodeURIComponent(inputText.value);
+                outputText.value = encoded;
+                if(encoded) showToast("Text encoded successfully!");
+            } catch (e) {
+                showToast("Error during URL encoding", "error");
+                outputText.value = "";
+            }
+        }
+
+        function decodeURL() {
+            if (!inputText.value.trim()) {
+                showToast("Input cannot be empty", "error");
+                return;
+            }
+            try {
+                const decoded = decodeURIComponent(inputText.value);
+                outputText.value = decoded;
+                if(decoded) showToast("URL decoded successfully!");
+            } catch (e) {
+                showToast("Error: Input is not a valid encoded URL", "error");
+                outputText.value = "";
+            }
+        }
+
+        function copyToClipboard() {
+            if (!outputText.value) {
+                showToast("No result to copy", "error");
+                return;
+            }
+            navigator.clipboard.writeText(outputText.value).then(() => {
+                showToast("Result copied to clipboard!");
+            }).catch(() => {
+                showToast("Failed to copy to clipboard", "error");
+            });
+        }
+
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    inputText.value = text;
+                    showToast("Text pasted successfully!");
+                } else {
+                    showToast("Clipboard is empty", "error");
+                }
+            } catch (err) {
+                showToast("Failed to read from clipboard", "error");
+            }
+        }
+        
+        function clearFields() {
+            inputText.value = "";
+            outputText.value = "";
+            showToast("All fields cleared.");
+        }
+    </script>
+</body>
+</html>

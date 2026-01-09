@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>JWT Debugger (Offline)</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <style>
+    body { background-color: var(--bg); color: var(--text); transition: .3s; }
+    .main-card { background-color: var(--panel); border: 1px solid var(--border); color: var(--text); }
+    textarea { background-color: var(--bg) !important; border-color: var(--border) !important; color: var(--text) !important; }
+    textarea:focus { border-color: var(--btn-primary) !important; outline: none; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2); }
+    .btn-tool { background-color: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .btn-tool:hover { background-color: var(--btn-hover); color: var(--text); }
+    
+    .jwt-header { color: #fb7185; } /* Rose */
+    .jwt-payload { color: #38bdf8; } /* Sky */
+    .jwt-signature { color: #fbbf24; } /* Amber */
+    
+    pre { background-color: rgba(0,0,0,0.05); }
+    [data-theme='dark'] pre { background-color: rgba(255,255,255,0.05); }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 font-sans">
+  
+  <div class="container mx-auto max-w-7xl">
+    <header class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-2">
+            <i class="bi bi-shield-lock text-rose-500"></i> JWT Debugger
+        </h1>
+        <p class="mt-1 opacity-70">Decode JSON Web Tokens secara lokal di browser Anda.</p>
+      </div>
+            <div class="flex gap-2">
+                <button id="btnTheme" class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm">🌞 Light</button>
+                <a href="{{ url_for('routes.landing') }}"
+                   class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      
+      <!-- Input Section -->
+      <div class="flex flex-col gap-6">
+        <div class="main-card rounded-xl shadow-lg p-6">
+          <label class="block font-bold mb-2 opacity-90">Paste Token Anda di sini</label>
+          <textarea id="jwtInput" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full p-4 border rounded-lg min-h-[400px] font-mono text-sm break-all" spellcheck="false"></textarea>
+          
+          <div class="mt-4 flex gap-2">
+            <button id="btnClear" class="btn-tool px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+              <i class="bi bi-trash"></i> Clear
+            </button>
+          </div>
+        </div>
+
+        <div id="statusAlert" class="hidden p-4 rounded-lg border flex items-start gap-3">
+            <i id="statusIcon" class="bi text-xl"></i>
+            <div>
+                <h4 id="statusTitle" class="font-bold"></h4>
+                <p id="statusDesc" class="text-sm opacity-90"></p>
+            </div>
+        </div>
+      </div>
+
+      <!-- Result Section -->
+      <div class="flex flex-col gap-6">
+        
+        <!-- Header -->
+        <div class="main-card rounded-xl shadow-lg p-6">
+          <div class="flex justify-between items-center mb-3">
+             <h3 class="font-bold text-lg jwt-header uppercase tracking-wider">Header</h3>
+             <span class="text-xs opacity-50 font-mono">Algorithm & Token Type</span>
+          </div>
+          <pre id="headerOutput" class="p-4 rounded-lg overflow-x-auto text-sm font-mono jwt-header">{}</pre>
+        </div>
+
+        <!-- Payload -->
+        <div class="main-card rounded-xl shadow-lg p-6">
+          <div class="flex justify-between items-center mb-3">
+             <h3 class="font-bold text-lg jwt-payload uppercase tracking-wider">Payload</h3>
+             <span class="text-xs opacity-50 font-mono">Data / Claims</span>
+          </div>
+          <pre id="payloadOutput" class="p-4 rounded-lg overflow-x-auto text-sm font-mono jwt-payload">{}</pre>
+        </div>
+
+        <!-- Signature Info -->
+        <div class="main-card rounded-xl shadow-lg p-6">
+          <h3 class="font-bold text-lg jwt-signature uppercase tracking-wider mb-3">Signature</h3>
+          <p class="text-sm opacity-70 italic">Signature dideteksi, namun verifikasi kunci (secret/public key) tidak dilakukan di alat offline ini demi privasi.</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const jwtInput = document.getElementById('jwtInput');
+    const headerOutput = document.getElementById('headerOutput');
+    const payloadOutput = document.getElementById('payloadOutput');
+    const statusAlert = document.getElementById('statusAlert');
+    const statusIcon = document.getElementById('statusIcon');
+    const statusTitle = document.getElementById('statusTitle');
+    const statusDesc = document.getElementById('statusDesc');
+
+    function base64UrlDecode(str) {
+        try {
+            str = str.replace(/-/g, '+').replace(/_/g, '/');
+            while (str.length % 4) str += '=';
+            return decodeURIComponent(atob(str).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function formatTime(unix) {
+        const d = new Date(unix * 1000);
+        return d.toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'medium' });
+    }
+
+    function updateDebug() {
+        const token = jwtInput.value.trim();
+        if (!token) {
+            headerOutput.textContent = '{}';
+            payloadOutput.textContent = '{}';
+            statusAlert.classList.add('hidden');
+            return;
+        }
+
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+            headerOutput.textContent = 'Invalid JWT structure';
+            payloadOutput.textContent = 'Invalid JWT structure';
+            showStatus('error', 'Struktur Tidak Valid', 'JWT harus terdiri dari 3 bagian yang dipisahkan oleh titik (header.payload.signature).');
+            return;
+        }
+
+        const headerStr = base64UrlDecode(parts[0]);
+        const payloadStr = base64UrlDecode(parts[1]);
+
+        if (!headerStr || !payloadStr) {
+            showStatus('error', 'Gagal Decode', 'Karakter Base64 tidak valid atau korup.');
+            return;
+        }
+
+        try {
+            const headerObj = JSON.parse(headerStr);
+            const payloadObj = JSON.parse(payloadStr);
+
+            headerOutput.textContent = JSON.stringify(headerObj, null, 2);
+            payloadOutput.textContent = JSON.stringify(payloadObj, null, 2);
+
+            // Check Expiration
+            if (payloadObj.exp) {
+                const now = Math.floor(Date.now() / 1000);
+                const expired = now > payloadObj.exp;
+                const timeStr = formatTime(payloadObj.exp);
+
+                if (expired) {
+                    showStatus('warning', 'Token Expired', `Token ini telah kedaluwarsa pada ${timeStr}.`);
+                } else {
+                    showStatus('success', 'Token Aktif', `Token berlaku hingga ${timeStr}.`);
+                }
+            } else {
+                showStatus('info', 'Tanpa Expiry', 'Token ini tidak memiliki claim "exp" (expiration time).');
+            }
+
+        } catch (e) {
+            showStatus('error', 'JSON Error', 'Isi token bukan format JSON yang valid.');
+        }
+    }
+
+    function showStatus(type, title, desc) {
+        statusAlert.classList.remove('hidden', 'bg-red-100', 'border-red-400', 'text-red-700', 'bg-green-100', 'border-green-400', 'text-green-700', 'bg-amber-100', 'border-amber-400', 'text-amber-700', 'bg-blue-100', 'border-blue-400', 'text-blue-700');
+        statusIcon.classList.remove('bi-exclamation-circle-fill', 'bi-check-circle-fill', 'bi-info-circle-fill', 'bi-exclamation-triangle-fill');
+
+        if (type === 'error') {
+            statusAlert.classList.add('bg-red-100', 'border-red-400', 'text-red-700');
+            statusIcon.classList.add('bi-exclamation-circle-fill');
+        } else if (type === 'success') {
+            statusAlert.classList.add('bg-green-100', 'border-green-400', 'text-green-700');
+            statusIcon.classList.add('bi-check-circle-fill');
+        } else if (type === 'warning') {
+            statusAlert.classList.add('bg-amber-100', 'border-amber-400', 'text-amber-700');
+            statusIcon.classList.add('bi-exclamation-triangle-fill');
+        } else {
+            statusAlert.classList.add('bg-blue-100', 'border-blue-400', 'text-blue-700');
+            statusIcon.classList.add('bi-info-circle-fill');
+        }
+
+        statusTitle.textContent = title;
+        statusDesc.textContent = desc;
+    }
+
+    jwtInput.addEventListener('input', updateDebug);
+    document.getElementById('btnClear').onclick = () => {
+        jwtInput.value = '';
+        updateDebug();
+    };
+
+  </script>
+</body>
+</html>

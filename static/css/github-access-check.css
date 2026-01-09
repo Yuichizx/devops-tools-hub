@@ -1,0 +1,19 @@
+  body {
+    background-color: #f8f9fa;
+  }
+  .container {
+    max-width: 720px;
+    margin-top: 60px;
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  }
+  .team-checkboxes {
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 10px;
+    background-color: #fdfdfd;
+  }

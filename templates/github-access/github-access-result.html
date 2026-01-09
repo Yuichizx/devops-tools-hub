@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Access Result</title>
+  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/theme.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/github-access.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/github-access-theme.css') }}" rel="stylesheet">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</head>
+<body class="github-access-page">
+
+<!-- Navbar -->
+<nav class="navbar navbar-dark bg-dark fixed-top">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{{ url_for('routes.landing') }}">
+      <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" style="height: 30px; margin-right: 8px;">
+      GitHub Access Checker
+    </a>
+  </div>
+</nav>
+
+<!-- Main Container -->
+<div class="container py-5" style="margin-top: 60px;">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Hasil Cek Akses untuk <strong>{{ username }}</strong></h2>
+    <a href="{{ url_for('routes.github_access_check_form') }}" class="btn btn-secondary px-4">
+      Kembali
+    </a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <caption class="visually-hidden">Hasil pengecekan akses GitHub untuk {{ username }}</caption>
+      <thead class="table-dark">
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Repository</th>
+          <th scope="col">Status</th>
+          <th scope="col">Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+          {% if r.status == 'found' and r.role and r.role != '-' and r.role.lower() != 'none' %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td class="fw-bold">{{ r.repo }}</td>
+              <td>
+                <span class="badge bg-success">
+                  Found
+                </span>
+              </td>
+              <td><strong>{{ r.role.upper() }}</strong></td>
+            </tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="text-center mt-4">
+    <a href="{{ url_for('routes.github_access_check_form') }}" class="btn btn-primary">
+      Cek Lagi
+    </a>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

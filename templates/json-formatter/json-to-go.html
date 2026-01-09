@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>JSON → Go Struct</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <style>
+    body { background-color: var(--bg); color: var(--text); transition: .3s; }
+    .main-card { background-color: var(--panel); border: 1px solid var(--border); color: var(--text); }
+    textarea { background-color: var(--bg) !important; border-color: var(--border) !important; color: var(--text) !important; }
+    textarea:focus { border-color: var(--btn-primary) !important; outline: none; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2); }
+    .btn-tool { background-color: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .btn-tool:hover { background-color: var(--btn-hover); color: var(--text); }
+    textarea::-webkit-scrollbar { width: 8px; }
+    textarea::-webkit-scrollbar-track { background: var(--bg); }
+    textarea::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 4px; opacity: 0.5; }
+    #toast { transition: transform .3s, opacity .3s; z-index: 99; }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 font-sans">
+  
+  <div class="container mx-auto max-w-6xl">
+    <header class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-2">
+            <i class="bi bi-filetype-go text-sky-500"></i> JSON → Go Struct
+        </h1>
+        <p class="mt-1 opacity-70">Konversi JSON ke struct Golang secara otomatis.</p>
+      </div>
+            <div class="flex gap-2">
+                <button id="btnTheme" class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm">🌞 Light</button>
+                <a href="{{ url_for('routes.json_formatter_index') }}"
+                   class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+    </header>
+
+    <div class="main-card rounded-xl shadow-lg p-6 md:p-8">
+      <div class="mb-6">
+        <div class="flex justify-between items-center mb-2">
+          <label class="font-bold opacity-90">Input JSON</label>
+          <div class="flex gap-2">
+            <button id="btnPaste" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2" title="Paste"><i class="bi bi-clipboard"></i> Paste</button>
+          </div>
+        </div>
+        <textarea id="inputJson" placeholder='{"id":101,"name":"John Doe","email":"johndoe@example.com","is_active":true,"age":27}' class="w-full p-4 border rounded-lg min-h-[200px] font-mono text-sm"></textarea>
+      </div>
+
+      <div class="flex flex-col md:flex-row items-center justify-center gap-3 mb-6">
+        <button id="btnConvert" class="w-full md:w-auto bg-sky-600 text-white px-8 py-3 text-base font-semibold rounded-lg hover:bg-sky-700 shadow-md inline-flex items-center gap-2 justify-center transition transform active:scale-95">
+          <i class="bi bi-magic"></i> Konversi ke Go
+        </button>
+        <button id="btnReset" class="w-full md:w-auto btn-tool px-6 py-3 text-base font-semibold rounded-lg shadow-sm inline-flex items-center gap-2 justify-center">
+          <i class="bi bi-arrow-counterclockwise"></i> Reset
+        </button>
+      </div>
+
+      <div>
+        <div class="flex justify-between items-center mb-2">
+          <label class="font-bold opacity-90">Hasil Go Struct</label>
+          <div class="flex gap-2">
+            <button id="btnCopy" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2" title="Salin"><i class="bi bi-copy"></i> Salin</button>
+            <button id="btnDownload" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2 hover:text-green-500" title="Unduh"><i class="bi bi-download"></i> Unduh</button>
+          </div>
+        </div>
+        <textarea id="outputCode" readonly class="w-full p-4 border rounded-lg min-h-[300px] font-mono text-sm whitespace-pre"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0">
+    <p id="toast-message">Pesan notifikasi.</p>
+  </div>
+
+  <script>
+    const toast = document.getElementById('toast'), toastMsg = document.getElementById('toast-message'); 
+    let t;
+    function showToast(m, type='success'){ 
+        clearTimeout(t); 
+        toastMsg.textContent=m; 
+        toast.className = 'fixed bottom-5 right-5 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-0 opacity-100 ' + (type==='error'?'bg-red-600':'bg-slate-800'); 
+        t = setTimeout(() => toast.className = 'fixed bottom-5 right-5 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0', 3000); 
+    }
+
+    const inputJson = document.getElementById('inputJson');
+    const outputCode = document.getElementById('outputCode');
+
+    document.getElementById('btnPaste').onclick = async () => {
+      try { const x = await navigator.clipboard.readText(); if (x) { inputJson.value = x; showToast('Teks ditempel!'); } else showToast('Clipboard kosong','error'); } catch { showToast('Gagal membaca clipboard','error'); }
+    };
+    document.getElementById('btnReset').onclick = () => { inputJson.value=''; outputCode.value=''; showToast('Direset.'); };
+    document.getElementById('btnCopy').onclick = () => { if(!outputCode.value) return showToast('Tidak ada hasil','error'); navigator.clipboard.writeText(outputCode.value).then(()=>showToast('Disalin!')); };
+    document.getElementById('btnDownload').onclick = () => {
+      if (!outputCode.value) return showToast('Tidak ada hasil','error');
+      const blob = new Blob([outputCode.value], { type:'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'model.go';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
+    const INITIALISMS = new Set(['API','ASCII','CPU','CSS','DNS','EOF','GUID','HTML','HTTP','HTTPS','ID','IP','JSON','JWT','PDF','QPS','RAM','RPC','SLA','SMTP','SQL','SSH','TCP','TLS','TTL','UDP','UI','UID','UUID','URI','URL','UTF','VM','XML']);
+    function cap(s){ return s ? s[0].toUpperCase() + s.slice(1) : s; }
+    function tokens(s){ return String(s).replace(/[^A-Za-z0-9]+/g, ' ').replace(/([a-z0-9])([A-Z])/g, '$1 $2').trim().split(/\s+/).filter(Boolean); }
+    function toPascalRaw(s){ return tokens(s).map(cap).join(''); }
+    function applyInitialisms(name){ const parts = name.match(/[A-Z]+(?![a-z])|[A-Z][a-z0-9]*/g) || [name]; return parts.map(p => INITIALISMS.has(p.toUpperCase()) ? p.toUpperCase() : p).join(''); }
+    function toPascalWithInitialisms(s){ return applyInitialisms(toPascalRaw(s)); }
+    const isoDateRe = /^\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+\-]\d{2}:?\d{2})?)?$/;
+    function isISODate(val){ if(typeof val!=='string') return false; if(!isoDateRe.test(val)) return false; const d = new Date(val); return !isNaN(d.getTime()); }
+
+    function analyze(value){
+      if (value === null) return { kind:'null', nullable:true };
+      const t = typeof value;
+      if (t === 'string') return { kind: isISODate(value) ? 'time' : 'string', nullable:false };
+      if (t === 'number') return { kind: Number.isInteger(value) ? 'int' : 'float', nullable:false };
+      if (t === 'boolean') return { kind: 'bool', nullable:false };
+      if (Array.isArray(value)){
+        if (value.length === 0) return { kind:'array', schema:{ elem:{ kind:'any' } }, nullable:false };
+        const elAnalyses = value.map(analyze).filter(a => a.kind!=='null');
+        if (elAnalyses.length === 0) return { kind:'array', schema:{ elem:{ kind:'any' } }, nullable:false };
+        return { kind:'array', schema:{ elem: elAnalyses[0] }, nullable:false };
+      }
+      if (t === 'object'){
+        const schema = {};
+        for (const k of Object.keys(value)){ schema[k] = analyze(value[k]); }
+        return { kind:'object', schema, nullable:false };
+      }
+      return { kind:'any', nullable:false };
+    }
+
+    function generateGo_IRootObject(analyzed){
+      const defs = []; let needsTime = false; const seen = new Map();
+      function typeFor(a, hint){
+        switch(a.kind){
+          case 'string': return 'string'; case 'bool': return 'bool'; case 'int': return 'int'; case 'float': return 'float64';
+          case 'time': needsTime = true; return 'time.Time'; case 'any': return 'any';
+          case 'array': { const et = typeFor(a.schema.elem, hint+'Item').replace(/^\*+/, ''); return `[]${et}`; }
+          case 'object': { const tname = defineStruct(hint, a.schema); return tname; }
+          case 'null': return 'any'; default: return 'any';
+        }
+      }
+      function signatureOf(objSchema){ const keys = Object.keys(objSchema).sort(); return keys.map(k => k + ':' + objSchema[k].kind).join('|'); }
+      function defineStruct(baseName, objSchema){
+        const sig = signatureOf(objSchema); if (seen.has(sig)) return seen.get(sig);
+        let name = toPascalWithInitialisms(baseName || 'Auto'); let i=2; const used = new Set([...seen.values()]);
+        while (used.has(name)) name = `${name}${i++}`;
+        const lines = [];
+        for (const key of Object.keys(objSchema)){
+          const a = objSchema[key]; const fieldName = toPascalWithInitialisms(key); let typ = typeFor(a, fieldName);
+          if (a.nullable || a.kind==='null'){
+            if (typ === 'time.Time') typ = '*time.Time';
+            else if (!typ.startsWith('[]') && typ !== 'any' && !typ.startsWith('*')) { typ = `*${typ}`; }
+          }
+          const omitempty = (a.nullable ? ',omitempty' : ''); lines.push(`\t${fieldName} ${typ} \`json:"${key}${omitempty}"\``);
+        }
+        defs.push(`type ${name} struct {\n${lines.join('\n')}\n}`); seen.set(sig, name); return name;
+      }
+      let header = `package models\n\n`; if (needsTime) header += `import "time"\n\n`;
+      if (analyzed.kind === 'object') { defineStruct('Root', analyzed.schema); } 
+      else if (analyzed.kind === 'array') { const t = typeFor(analyzed.schema.elem, 'RootItem').replace(/^\*+/, ''); defs.unshift(`// Root: []${t}`); } 
+      else { defs.unshift(`// Root: ${typeFor(analyzed, 'Root')}`); }
+      return header + defs.join('\n\n');
+    }
+
+    document.getElementById('btnConvert').onclick = () => {
+      if (!inputJson.value.trim()) return showToast('Input JSON tidak boleh kosong','error');
+      let data; try { data = JSON.parse(inputJson.value); } catch { return showToast('JSON tidak valid','error'); }
+      try { const analyzed = analyze(data); const code = generateGo_IRootObject(analyzed); outputCode.value = code; showToast('Berhasil konversi!'); } catch(e) { showToast('Error: ' + e.message, 'error'); }
+    };
+  </script>
+</body>
+</html>

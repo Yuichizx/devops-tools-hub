@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>JSON ↔ YAML Converter</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+  <script src="{{ url_for('static', filename='js/js-yaml.min.js') }}"></script>
+  
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <style>
+    body { background-color: var(--bg); color: var(--text); transition: .3s; }
+    .main-card { background-color: var(--panel); border: 1px solid var(--border); color: var(--text); }
+    textarea { background-color: var(--bg) !important; border-color: var(--border) !important; color: var(--text) !important; }
+    textarea:focus { border-color: var(--btn-primary) !important; outline: none; box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2); }
+    .btn-tool { background-color: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .btn-tool:hover { background-color: var(--btn-hover); color: var(--text); }
+    textarea::-webkit-scrollbar { width: 8px; }
+    textarea::-webkit-scrollbar-track { background: var(--bg); }
+    textarea::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 4px; opacity: 0.5; }
+    #toast { transition: transform .3s, opacity .3s; z-index: 99; }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 font-sans">
+  
+  <div class="container mx-auto max-w-7xl">
+    <header class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-2">
+            <i class="bi bi-arrow-left-right text-rose-500"></i> JSON ↔ YAML
+        </h1>
+        <p class="mt-1 opacity-70">Konversi data antara format JSON dan YAML dengan mudah.</p>
+      </div>
+            <div class="flex gap-2">
+                <button id="btnTheme" class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm">🌞 Light</button>
+                <a href="{{ url_for('routes.json_formatter_index') }}"
+                   class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+    </header>
+
+    <div class="main-card rounded-xl shadow-lg p-6 md:p-8">
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- JSON Section -->
+        <div class="flex flex-col">
+          <div class="flex justify-between items-center mb-2">
+            <label class="font-bold opacity-90 text-sky-500">JSON</label>
+            <div class="flex gap-2">
+              <button id="btnPasteJson" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2" title="Paste JSON"><i class="bi bi-clipboard"></i> Paste</button>
+              <button id="btnCopyJson" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2" title="Copy JSON"><i class="bi bi-copy"></i> Copy</button>
+            </div>
+          </div>
+          <textarea id="jsonInput" placeholder='{"key": "value", "list": [1, 2, 3]}' class="w-full p-4 border rounded-lg min-h-[400px] font-mono text-sm flex-1"></textarea>
+        </div>
+
+        <!-- Middle Actions (Desktop: Vertical, Mobile: Horizontal) -->
+        <div class="flex md:hidden flex-row justify-center gap-4 my-2">
+            <button id="btnToYamlMobile" class="bg-sky-600 text-white px-6 py-2 rounded-lg hover:bg-sky-700 shadow-md flex items-center gap-2">
+                <i class="bi bi-arrow-down"></i> Ke YAML
+            </button>
+            <button id="btnToJsonMobile" class="bg-rose-600 text-white px-6 py-2 rounded-lg hover:bg-rose-700 shadow-md flex items-center gap-2">
+                <i class="bi bi-arrow-up"></i> Ke JSON
+            </button>
+        </div>
+
+        <!-- YAML Section -->
+        <div class="flex flex-col">
+          <div class="flex justify-between items-center mb-2">
+            <label class="font-bold opacity-90 text-rose-500">YAML</label>
+            <div class="flex gap-2">
+               <button id="btnPasteYaml" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2" title="Paste YAML"><i class="bi bi-clipboard"></i> Paste</button>
+               <button id="btnCopyYaml" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2" title="Copy YAML"><i class="bi bi-copy"></i> Copy</button>
+            </div>
+          </div>
+          <textarea id="yamlInput" placeholder='key: value
+list:
+  - 1
+  - 2
+  - 3' class="w-full p-4 border rounded-lg min-h-[400px] font-mono text-sm flex-1"></textarea>
+        </div>
+      </div>
+
+      <!-- Action Buttons Desktop -->
+      <div class="hidden md:flex justify-center gap-6 mt-6">
+         <button id="btnToYaml" class="bg-sky-600 text-white px-8 py-3 text-base font-semibold rounded-lg hover:bg-sky-700 shadow-md flex items-center gap-2 transition transform active:scale-95">
+            JSON <i class="bi bi-arrow-right"></i> YAML
+         </button>
+         <button id="btnToJson" class="bg-rose-600 text-white px-8 py-3 text-base font-semibold rounded-lg hover:bg-rose-700 shadow-md flex items-center gap-2 transition transform active:scale-95">
+            JSON <i class="bi bi-arrow-left"></i> YAML
+         </button>
+         <button id="btnReset" class="btn-tool px-6 py-3 text-base font-semibold rounded-lg shadow-sm flex items-center gap-2">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset
+         </button>
+      </div>
+      
+      <!-- Reset Mobile -->
+      <div class="md:hidden flex justify-center mt-4">
+          <button id="btnResetMobile" class="w-full btn-tool px-6 py-3 text-base font-semibold rounded-lg shadow-sm flex items-center gap-2 justify-center">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset
+         </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0">
+    <p id="toast-message">Pesan notifikasi.</p>
+  </div>
+
+  <script>
+    // --- TOAST UTILS ---
+    const toast = document.getElementById('toast'), toastMsg = document.getElementById('toast-message'); 
+    let t;
+    function showToast(m, type='success'){ 
+        clearTimeout(t); 
+        toastMsg.textContent=m; 
+        toast.className = 'fixed bottom-5 right-5 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-0 opacity-100 ' + (type==='error'?'bg-red-600':'bg-slate-800'); 
+        t = setTimeout(() => toast.className = 'fixed bottom-5 right-5 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0', 3000); 
+    }
+
+    // --- ELEMENTS ---
+    const jsonInput = document.getElementById('jsonInput');
+    const yamlInput = document.getElementById('yamlInput');
+
+    // --- LOGIC ---
+    function jsonToYaml() {
+        const val = jsonInput.value.trim();
+        if(!val) return showToast('JSON kosong!', 'error');
+        try {
+            const obj = JSON.parse(val);
+            const yamlStr = jsyaml.dump(obj);
+            yamlInput.value = yamlStr;
+            showToast('Berhasil konversi ke YAML');
+        } catch (e) {
+            showToast('JSON Error: ' + e.message, 'error');
+        }
+    }
+
+    function yamlToJson() {
+        const val = yamlInput.value.trim();
+        if(!val) return showToast('YAML kosong!', 'error');
+        try {
+            const obj = jsyaml.load(val);
+            const jsonStr = JSON.stringify(obj, null, 2);
+            jsonInput.value = jsonStr;
+            showToast('Berhasil konversi ke JSON');
+        } catch (e) {
+            showToast('YAML Error: ' + e.message, 'error');
+        }
+    }
+    
+    function reset() {
+        jsonInput.value = '';
+        yamlInput.value = '';
+        showToast('Reset berhasil');
+    }
+
+    // --- EVENT LISTENERS ---
+    document.getElementById('btnToYaml').onclick = jsonToYaml;
+    document.getElementById('btnToJson').onclick = yamlToJson;
+    document.getElementById('btnToYamlMobile').onclick = jsonToYaml;
+    document.getElementById('btnToJsonMobile').onclick = yamlToJson;
+    document.getElementById('btnReset').onclick = reset;
+    document.getElementById('btnResetMobile').onclick = reset;
+
+    // Helper: Paste/Copy
+    async function pasteTo(el) {
+        try { const x = await navigator.clipboard.readText(); if(x){ el.value=x; showToast('Ditempel!'); } } catch { showToast('Gagal baca clipboard','error'); }
+    }
+    function copyFrom(el) {
+        if(!el.value) return showToast('Kosong','error');
+        navigator.clipboard.writeText(el.value).then(()=>showToast('Disalin!'));
+    }
+
+    document.getElementById('btnPasteJson').onclick = () => pasteTo(jsonInput);
+    document.getElementById('btnCopyJson').onclick = () => copyFrom(jsonInput);
+    document.getElementById('btnPasteYaml').onclick = () => pasteTo(yamlInput);
+    document.getElementById('btnCopyYaml').onclick = () => copyFrom(yamlInput);
+
+  </script>
+</body>
+</html>

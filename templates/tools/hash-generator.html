@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Hash & Checksum Generator</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/md5.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/bcrypt.min.js') }}"></script>
+
+  <style>
+    body { background-color: var(--bg); color: var(--text); transition: .3s; }
+    .main-card { background-color: var(--panel); border: 1px solid var(--border); color: var(--text); }
+    textarea { 
+        background-color: var(--bg) !important; 
+        border: 1px solid var(--border) !important; 
+        color: var(--text) !important; 
+    }
+    textarea:focus { border-color: var(--btn-primary) !important; outline: none; }
+    .btn-tool { background-color: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .btn-tool:hover { background-color: var(--btn-hover); color: var(--text); }
+    
+    .hash-row { border-bottom: 1px solid var(--border); }
+    .hash-row:last-child { border-bottom: none; }
+    .hash-label { width: 100px; font-weight: bold; opacity: 0.7; }
+    .hash-value { font-family: monospace; word-break: break-all; }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 font-sans">
+  
+  <div class="container mx-auto max-w-6xl">
+    <header class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-2">
+            <i class="bi bi-hash text-emerald-500"></i> Hash Generator
+        </h1>
+        <p class="mt-1 opacity-70">Generate MD5, Bcrypt, SHA1, SHA256, and SHA512 offline.</p>
+      </div>
+      <div class="flex gap-2">
+         <button id="btnTheme" class="btn-tool px-4 py-2 rounded-lg text-sm font-medium shadow-sm">🌞 Light</button>
+         <a href="{{ url_for('routes.landing') }}" class="btn-tool px-4 py-2 rounded-lg shadow-sm text-sm font-medium flex items-center gap-2">
+           <i class="bi bi-arrow-left"></i> Back
+         </a>
+      </div>
+    </header>
+
+    <div class="main-card rounded-xl shadow-lg p-6 md:p-8 mb-8">
+      <label class="block font-bold mb-2 opacity-90">Input Text</label>
+      <textarea id="inputText" placeholder="Enter text here..." class="w-full p-4 border rounded-lg min-h-[150px] font-mono text-sm mb-4"></textarea>
+      
+      <div class="flex justify-center gap-4">
+        <button id="btnReset" class="btn-tool px-6 py-2 rounded-lg font-bold flex items-center gap-2">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset
+        </button>
+      </div>
+    </div>
+
+    <div id="resultCard" class="main-card rounded-xl shadow-lg p-6 md:p-8 hidden">
+        <h3 class="font-bold text-xl mb-6 flex items-center gap-2">
+            <i class="bi bi-check2-circle text-green-500"></i> Hash Result
+        </h3>
+        
+        <div class="flex flex-col gap-4">
+            <div class="hash-row py-4 flex flex-col md:flex-row md:items-center gap-2">
+                <div class="hash-label">MD5</div>
+                <div id="md5" class="hash-value flex-1 bg-black/5 dark:bg-white/5 p-2 rounded"></div>
+                <button onclick="copyHash('md5')" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2" title="Copy"><i class="bi bi-copy"></i> Copy</button>
+            </div>
+            <div class="hash-row py-4 flex flex-col md:flex-row md:items-center gap-2">
+                <div class="hash-label">SHA1</div>
+                <div id="sha1" class="hash-value flex-1 bg-black/5 dark:bg-white/5 p-2 rounded"></div>
+                <button onclick="copyHash('sha1')" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2" title="Copy"><i class="bi bi-copy"></i> Copy</button>
+            </div>
+            <div class="hash-row py-4 flex flex-col md:flex-row md:items-center gap-2">
+                <div class="hash-label">SHA256</div>
+                <div id="sha256" class="hash-value flex-1 bg-black/5 dark:bg-white/5 p-2 rounded"></div>
+                <button onclick="copyHash('sha256')" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2" title="Copy"><i class="bi bi-copy"></i> Copy</button>
+            </div>
+            <div class="hash-row py-4 flex flex-col md:flex-row md:items-center gap-2">
+                <div class="hash-label">SHA512</div>
+                <div id="sha512" class="hash-value flex-1 bg-black/5 dark:bg-white/5 p-2 rounded"></div>
+                <button onclick="copyHash('sha512')" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2" title="Copy"><i class="bi bi-copy"></i> Copy</button>
+            </div>
+            <div class="hash-row py-4 flex flex-col md:flex-row md:items-center gap-2">
+                <div class="hash-label">Bcrypt (10)</div>
+                <div id="bcrypt" class="hash-value flex-1 bg-black/5 dark:bg-white/5 p-2 rounded italic opacity-70">Waiting for input...</div>
+                <button onclick="copyHash('bcrypt')" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2" title="Copy"><i class="bi bi-copy"></i> Copy</button>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all">
+    <p id="toast-message">Notification</p>
+  </div>
+
+  <script>
+    const inputText = document.getElementById('inputText');
+    const resultCard = document.getElementById('resultCard');
+    const toast = document.getElementById('toast'), toastMsg = document.getElementById('toast-message');
+
+    function showToast(m){ 
+        toastMsg.textContent=m; 
+        toast.className = 'fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-0 opacity-100'; 
+        setTimeout(() => toast.className = 'fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0', 2000); 
+    }
+
+    async function generateHashes() {
+        const text = inputText.value;
+        if (!text) {
+            resultCard.classList.add('hidden');
+            return;
+        }
+
+        resultCard.classList.remove('hidden');
+        const encoder = new TextEncoder();
+        const data = encoder.encode(text);
+
+        // Crypto Subtle (Native browser API)
+        const algorithms = ['SHA-1', 'SHA-256', 'SHA-512'];
+        for (const algo of algorithms) {
+            const hashBuffer = await crypto.subtle.digest(algo, data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            document.getElementById(algo.toLowerCase().replace('-', '')).textContent = hashHex;
+        }
+
+        // MD5 (Native crypto subtle doesn't support MD5, we use a simple JS implementation if needed, 
+        // but for now let's focus on SHA series which is more relevant for DevOps)
+        document.getElementById('md5').textContent = MD5(text);
+
+        // Bcrypt (Asynchronous to avoid blocking UI)
+        const bcryptEl = document.getElementById('bcrypt');
+        bcryptEl.textContent = "Calculating...";
+        bcryptEl.classList.add('opacity-50');
+        
+        dcodeIO.bcrypt.hash(text, 10, function(err, hash) {
+            if (!err && text === inputText.value) { // Check if input is still same
+                bcryptEl.textContent = hash;
+                bcryptEl.classList.remove('opacity-50', 'italic');
+            }
+        });
+    }
+
+    inputText.oninput = generateHashes;
+    document.getElementById('btnReset').onclick = () => { inputText.value = ''; generateHashes(); };
+
+    window.copyHash = (id) => {
+        const val = document.getElementById(id).textContent;
+        if (!val || val.includes('not supported')) return;
+        navigator.clipboard.writeText(val).then(() => showToast('Hash copied!'));
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IP Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+
+  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <style>
+    /* --- CSS Bridge: Menghubungkan Bootstrap dengan Theme Variables --- */
+    
+    body {
+        background-color: var(--bg);
+        color: var(--text);
+        padding-top: 80px; /* Space untuk navbar fixed */
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    .mono { font-family: monospace; }
+
+    /* Navbar Custom */
+    .navbar {
+        background-color: var(--panel) !important;
+        border-bottom: 1px solid var(--border);
+        transition: background-color 0.3s;
+    }
+    .navbar-brand { color: var(--text) !important; }
+
+    /* Card Styling */
+    .card {
+        background-color: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+
+    /* Form Controls */
+    .form-control {
+        background-color: var(--bg);
+        border-color: var(--border);
+        color: var(--text);
+    }
+    .form-control:focus {
+        background-color: var(--bg);
+        color: var(--text);
+        border-color: var(--btn-primary);
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .form-label { color: var(--text); opacity: 0.9; }
+
+    /* Tabel Custom untuk Dark Mode */
+    .table {
+        color: var(--text);
+        border-color: var(--border);
+    }
+    .table th { 
+        width: 200px; 
+        font-weight: 600;
+        color: var(--muted);
+    }
+    /* Override warna striping bootstrap agar sesuai tema */
+    .table-striped > tbody > tr:nth-of-type(odd) > * {
+        background-color: var(--ln-bg); /* Gunakan warna soft dari tema */
+        color: var(--text);
+        box-shadow: none; 
+    }
+    .table-striped > tbody > tr:nth-of-type(even) > * {
+        background-color: transparent;
+        color: var(--text);
+    }
+    .caption-top { color: var(--muted); }
+
+    /* Buttons */
+    .btn-secondary {
+        background-color: var(--bg);
+        border-color: var(--border);
+        color: var(--text);
+    }
+    .btn-secondary:hover {
+        background-color: var(--btn-hover);
+        border-color: var(--border);
+        color: var(--text);
+    }
+
+    /* Theme Toggle */
+    #btnTheme {
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+    #btnTheme:hover { background-color: var(--btn-hover); }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-expand fixed-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="{{ url_for('routes.landing') }}">
+        <img src="{{ url_for('static', filename='images/logo.png') }}"
+             alt="Logo" class="d-inline-block align-text-top"
+             style="margin-right: 8px; max-height: 30px;">
+        IP Calculator
+      </a>
+      
+      <div class="ms-auto">
+         <button id="btnTheme" class="btn btn-sm">🌞 Light</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0 text-cyan-600">IPv4 Subnet Calculator</h3>
+        <a href="{{ url_for('routes.landing') }}" class="btn btn-secondary btn-sm">
+          <i class="bi bi-arrow-left"></i> Kembali
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-5">
+      <div class="card-body p-4">
+
+        <div class="mb-4">
+          <label for="inputIp" class="form-label">
+            Masukkan Alamat IPv4 (Format CIDR didukung)
+          </label>
+          <input type="text"
+                 id="inputIp"
+                 class="form-control form-control-lg font-monospace"
+                 placeholder="Contoh: 192.168.0.1/24 atau 10.0.0.5">
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+              <caption class="caption-top">Hasil Kalkulasi Network</caption>
+              <tbody>
+                <tr>
+                  <th>IP Address</th>
+                  <td id="outIpWithMask" class="mono fw-bold text-primary"></td>
+                </tr>
+                <tr>
+                  <th>Network Address</th>
+                  <td id="outNetwork" class="mono text-success fw-bold"></td>
+                </tr>
+                <tr>
+                  <th>Broadcast Address</th>
+                  <td id="outBroadcast" class="mono text-warning fw-bold"></td>
+                </tr>
+                <tr>
+                  <th>Netmask</th>
+                  <td id="outMaskDotted" class="mono"></td>
+                </tr>
+                <tr>
+                  <th>Wildcard Mask</th>
+                  <td id="outWildcard" class="mono"></td>
+                </tr>
+                <tr>
+                  <th>CIDR Notation</th>
+                  <td id="outCidr" class="mono"></td>
+                </tr>
+                <tr>
+                  <th>Usable Hosts</th>
+                  <td id="outSize" class="mono"></td>
+                </tr>
+                <tr>
+                  <th>First Host</th>
+                  <td id="outFirst" class="mono"></td>
+                </tr>
+                <tr>
+                  <th>Last Host</th>
+                  <td id="outLast" class="mono"></td>
+                </tr>
+                <tr>
+                  <th>IP Class</th>
+                  <td id="outClass" class="mono"></td>
+                </tr>
+                <tr>
+                  <th>Binary Mask</th>
+                  <td id="outMaskBinary" class="mono small text-muted"></td>
+                </tr>
+              </tbody>
+            </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const input = document.getElementById('inputIp');
+
+        function ipToInt(ip) {
+          return ip.split('.').reduce((a,b)=> (a<<8)+(parseInt(b)||0),0)>>>0;
+        }
+        function intToIp(i) {
+          return [24,16,8,0].map(s=> (i>>>s &0xFF)).join('.');
+        }
+        function countOnes(n){
+          let cnt=0;
+          for (;n;n&=n-1) cnt++;
+          return cnt;
+        }
+        function padBin(n){
+          return n.toString(2).padStart(8,'0');
+        }
+
+        function update() {
+          let v = input.value.trim();
+          if(!v) return clearAll();
+
+          let ipPart, maskPart;
+          if (v.includes('/')) {
+            [ipPart, maskPart] = v.split('/');
+            maskPart = '/'+maskPart;
+          } else {
+            ipPart = v;
+            maskPart = '/32';
+          }
+          
+          // parse
+          let ipInt, maskInt;
+          try {
+            ipInt = ipToInt(ipPart);
+            if (maskPart.startsWith('/')) {
+              const bits = parseInt(maskPart.slice(1),10);
+              maskInt = bits? (~0 << (32-bits))>>>0 : 0;
+            } else {
+              maskInt = ipToInt(maskPart);
+            }
+          } catch {
+            return clearAll();
+          }
+
+          const prefix = countOnes(maskInt);
+          const net    = ipInt & maskInt;
+          const bcast  = net | (~maskInt>>>0);
+          const wild   = ~maskInt>>>0;
+          const size   = bcast - net + 1 - 2; // Usable hosts usually -2 (network & broadcast)
+
+          // compute first/last
+          let first, last, bcOut, sizeOut;
+          
+          if (prefix === 32) {
+            first = intToIp(net);
+            last  = first;
+            bcOut = 'N/A (Single Host)';
+            sizeOut = 1;
+          } else if (prefix === 31) {
+            // Point-to-Point links usually use both addresses
+            first = intToIp(net);
+            last  = intToIp(bcast);
+            bcOut = 'N/A';
+            sizeOut = 2;
+          } else {
+            first = intToIp(net+1);
+            last  = intToIp(bcast-1);
+            bcOut = intToIp(bcast);
+            sizeOut = size > 0 ? size.toLocaleString() : 0;
+          }
+
+          // class
+          const clsOct = ipPart.split('.')[0];
+          const o = parseInt(clsOct,10);
+          let cls = 'Unknown';
+          if (o>=1 && o<=126) cls='A';
+          else if (o===127) cls='Loopback';
+          else if (o>=128 && o<=191) cls='B';
+          else if (o>=192 && o<=223) cls='C';
+          else if (o>=224 && o<=239) cls='D (Multicast)';
+          else if (o>=240 && o<=254) cls='E (Experimental)';
+
+          // render
+          document.getElementById('outIpWithMask').textContent = `${intToIp(ipInt)}${maskPart.startsWith('/') ? maskPart : '/'+prefix}`;
+          document.getElementById('outNetwork').textContent    = intToIp(net);
+          document.getElementById('outMaskDotted').textContent = intToIp(maskInt);
+          document.getElementById('outMaskBinary').textContent = [24,16,8,0].map(s=> padBin(maskInt>>>s &0xFF)).join('.');
+          document.getElementById('outCidr').textContent       = '/'+prefix;
+          document.getElementById('outWildcard').textContent   = intToIp(wild);
+          document.getElementById('outSize').textContent       = sizeOut;
+          document.getElementById('outFirst').textContent      = first;
+          document.getElementById('outLast').textContent       = last;
+          document.getElementById('outBroadcast').textContent  = bcOut;
+          document.getElementById('outClass').textContent      = cls;
+        }
+
+        function clearAll(){
+          ['outIpWithMask','outNetwork','outMaskDotted','outMaskBinary',
+           'outCidr','outWildcard','outSize','outFirst','outLast','outBroadcast','outClass']
+           .forEach(id=> document.getElementById(id).textContent='-');
+        }
+
+        input.addEventListener('input', update);
+        
+        // Init with default placeholder logic (optional) if empty
+        // update();
+    });
+  </script>
+</body>
+</html>

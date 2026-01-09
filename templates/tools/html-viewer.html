@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HTML Viewer — Tema Putih</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <style>
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; display:grid; grid-template-columns:240px 1fr; grid-template-rows:100%;
+      background:var(--bg); color:var(--text); font:14px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial;
+    }
+    .sidebar{
+      background:var(--panel); border-right:1px solid var(--border); padding:14px; overflow:auto;
+    }
+    .sidebar h2{margin:0 0 12px; font-size:16px; text-align:center; color:var(--text)}
+    .menu{display:flex; flex-direction:column; gap:8px}
+    .menu .btn, .menu label.btn{background:var(--btn); border:1px solid var(--border); color:var(--text); padding:10px 12px; border-radius:8px; text-align:left; cursor:pointer; display:flex; align-items:center; gap:10px}
+    .menu .btn:hover, .menu label.btn:hover{background:var(--btn-hover)}
+    .icon{width:18px; text-align:center}
+    input[type="file"]{display:none}
+
+    .main{display:grid; grid-template-columns:1fr 1fr; min-height:100vh}
+    .pane{display:flex; flex-direction:column; background:var(--panel)}
+    .pane-head{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--border); color:var(--muted)}
+    .pane-title{font-weight:600; color:var(--text)}
+    .pane-body{flex:1; min-height:0}
+
+    textarea{width:100%; height:100%; background:var(--panel); color:var(--text); border:0; outline:none; resize:none; padding:12px; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+    iframe{width:100%; height:100%; border:0; background:var(--panel)}
+
+    .previewPane{border-left:2px solid var(--border)}
+
+    .switch{display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; color:var(--text)}
+    .switch input{appearance:none; width:42px; height:24px; background:var(--btn); border:1px solid var(--border); border-radius:999px; position:relative}
+    .switch input::after{content:""; position:absolute; width:18px; height:18px; top:2px; left:2px; border-radius:50%; background:#fff; transition:.2s}
+    .switch input:checked{background:var(--btn-primary); border-color:transparent}
+    .switch input:checked::after{left:22px}
+
+    .status{font-size:12px; color:var(--muted)}
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <h2>HTML Online Viewer</h2>
+    <div class="menu">
+      <button class="btn" id="btnTheme">dYOz Light</button>
+      <button class="btn" id="btnPreviewFull"><span class="icon">👁️</span>Preview (Full page)</button>
+      <button class="btn" id="btnHighlightFull"><span class="icon">🖍️</span>Highlight (Full page)</button>
+      <button class="btn" id="btnFormat"><span class="icon">✨</span>Format</button>
+      <button class="btn" id="btnExpandAll"><span class="icon">➕</span>Expand all</button>
+      <button class="btn" id="btnCollapseAll"><span class="icon">➖</span>Collapse all</button>
+      <button class="btn" id="btnSample"><span class="icon">📄</span>Sample</button>
+      <button class="btn" id="btnClear"><span class="icon">🗑️</span>Clear</button>
+      <label class="btn" for="fileInput"><span class="icon">📥</span>Import</label>
+      <button class="btn" id="btnExport"><span class="icon">📤</span>Export</button>
+      <input id="fileInput" type="file" accept=".html,.htm,.txt,.md,.markdown,.xml,.svg,.json,.css,.js" />
+      <div class="status" id="status">Siap</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section class="pane editorPane">
+      <div class="pane-head">
+        <div class="pane-title">Editor</div>
+        <label class="switch" title="Live preview">
+          <span>Live</span>
+          <input type="checkbox" id="liveToggle" checked>
+        </label>
+      </div>
+      <div class="pane-body"><textarea id="editor" spellcheck="false" placeholder="Tulis atau tempel HTML / Markdown di sini..."></textarea></div>
+    </section>
+
+    <section class="pane previewPane">
+      <div class="pane-head">
+        <div class="pane-title">Preview</div>
+        <label class="switch" title="Izinkan script saat render (risiko XSS)">
+          <span>Scripts</span>
+        <input type="checkbox" id="allowScripts">
+        </label>
+      </div>
+      <div class="pane-body"><iframe id="preview" title="Preview" sandbox="allow-same-origin allow-forms allow-popups allow-pointer-lock allow-top-navigation-by-user-activation"></iframe></div>
+    </section>
+  </main>
+
+  <template id="sampleHtml"><![CDATA[
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Sample</title>
+    <style>
+      body{font:16px/1.6 system-ui; padding:24px; background:#fff; color:#111827}
+      details{margin:10px 0}
+      code{background:#f3f4f6; padding:2px 6px; border-radius:6px}
+      button{padding:6px 10px}
+    </style>
+  </head>
+  <body>
+    <h1>Contoh Halaman</h1>
+    <p>Ini contoh <strong>HTML</strong>. Coba buka/tutup bagian di bawah.</p>
+    <details open><summary>Bagian A</summary><p>Konten A</p></details>
+    <details><summary>Bagian B</summary><p>Konten B</p></details>
+    <button onclick="alert('Hi from sample!')">Test Script</button>
+  </body>
+</html>
+  ]]></template>
+
+  <script>
+    const $ = (s, r=document)=>r.querySelector(s);
+    const statusEl = $('#status');
+    function setStatus(t){ statusEl.textContent = t }
+
+    const editor = $('#editor');
+    const preview = $('#preview');
+    const liveToggle = $('#liveToggle');
+    const allowScripts = $('#allowScripts');
+
+    const btnPreviewFull = $('#btnPreviewFull');
+    const btnHighlightFull = $('#btnHighlightFull');
+    const btnFormat = $('#btnFormat');
+    const btnExpandAll = $('#btnExpandAll');
+    const btnCollapseAll = $('#btnCollapseAll');
+    const btnSample = $('#btnSample');
+    const btnClear = $('#btnClear');
+    const btnExport = $('#btnExport');
+    const fileInput = $('#fileInput');
+
+    function mdToHtml(md){
+      let h = md
+        .replace(/^###### (.*$)/gim, '<h6>$1</h6>')
+        .replace(/^##### (.*$)/gim, '<h5>$1</h5>')
+        .replace(/^#### (.*$)/gim, '<h4>$1</h4>')
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        .replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>')
+        .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+        .replace(/`([^`]+)`/gim, '<code>$1</code>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br/>');
+      return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Markdown Preview</title><style>body{font:16px/1.7 system-ui;padding:24px;color:#111827} code{background:#f3f4f6;padding:2px 6px;border-radius:6px} blockquote{border-left:4px solid #999;padding-left:12px;color:#666}</style></head><body><p>${h}</p></body></html>`;
+    }
+
+    function formatHtml(html){
+      const voidTags = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+      const tokens = (html||'').replace(/>\s+</g,'><').replace(/\r?\n/g,'').match(/<[^>]+>|[^<]+/g) || [];
+      let indent=0; const out=[]; const pad=n=>'  '.repeat(n);
+      for(const t of tokens){
+        if(t.startsWith('<')){
+          if(/^<\//.test(t)) { indent=Math.max(indent-1,0); out.push('\n'+pad(indent)+t); }
+          else if(/\/>$/.test(t) || voidTags.has((t.match(/^<\s*([\w:-]+)/)||[])[1]?.toLowerCase())) { out.push('\n'+pad(indent)+t); }
+          else if(/^<\!/.test(t)) { out.push('\n'+pad(indent)+t); }
+          else { out.push('\n'+pad(indent)+t); indent++; }
+        } else {
+          const txt = t.trim(); if(txt) out.push(txt);
+        }
+      }
+      return out.join('').trimStart();
+    }
+
+    function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function render(){
+      const src = editor.value.trim();
+      const isMarkdown = /^(#|>|\*\*|\*\s|\d+\.|```)/m.test(src);
+      const html = isMarkdown ? mdToHtml(src) : (src || $('#sampleHtml').innerHTML);
+      const baseSandbox = 'allow-same-origin allow-forms allow-popups allow-pointer-lock allow-top-navigation-by-user-activation';
+      const sb = allowScripts.checked ? baseSandbox + ' allow-scripts' : baseSandbox;
+      preview.setAttribute('sandbox', sb);
+      preview.srcdoc = html;
+      setStatus('Dirender');
+    }
+
+    // --- Expand/Collapse agar mengubah SOURCE (EDITOR) ---
+    function serialize(doc){
+      try {
+        return doc.documentElement && doc.documentElement.outerHTML
+          ? doc.documentElement.outerHTML
+          : doc.body.innerHTML;
+      } catch(e){ return editor.value; }
+    }
+    function expandInSource(){
+      const src = editor.value || '';
+      if(!/<\s*details\b/i.test(src)) { setStatus('Tidak ada <details> di source'); return; }
+      const doc = new DOMParser().parseFromString(src, 'text/html');
+      doc.querySelectorAll('details').forEach(d=> d.setAttribute('open',''));
+      editor.value = serialize(doc);
+      render(); setStatus('Semua <details> pada SOURCE dibuka');
+    }
+    function collapseInSource(){
+      const src = editor.value || '';
+      if(!/<\s*details\b/i.test(src)) { setStatus('Tidak ada <details> di source'); return; }
+      const doc = new DOMParser().parseFromString(src, 'text/html');
+      doc.querySelectorAll('details').forEach(d=> d.removeAttribute('open'));
+      editor.value = serialize(doc);
+      render(); setStatus('Semua <details> pada SOURCE ditutup');
+    }
+
+    function getDoc(){ try{ return preview.contentDocument; } catch{ return null } }
+
+    btnPreviewFull.addEventListener('click', ()=>{
+      const html = preview.srcdoc || editor.value || '<!doctype html><meta charset="utf-8"><title>Preview</title>';
+      const url = URL.createObjectURL(new Blob([html], {type:'text/html'}));
+      window.open(url, '_blank');
+      setTimeout(()=>URL.revokeObjectURL(url), 30000);
+    });
+
+    btnHighlightFull.addEventListener('click', ()=>{
+      const src = editor.value; const escaped = escapeHtml(src);
+      const page = `<!doctype html><meta charset="utf-8"><title>Highlighted Source</title><style>body{margin:0;background:#ffffff;color:#111827;font:13px/1.6 ui-monospace,Menlo,Consolas,monospace} pre{white-space:pre;overflow:auto;padding:18px}</style><pre>${escaped}</pre>`;
+      const url = URL.createObjectURL(new Blob([page], {type:'text/html'}));
+      window.open(url, '_blank'); setTimeout(()=>URL.revokeObjectURL(url), 30000);
+    });
+
+    btnFormat.addEventListener('click', ()=>{ editor.value = formatHtml(editor.value); render(); setStatus('Diformat'); });
+    btnSample.addEventListener('click', ()=>{ editor.value = $('#sampleHtml').innerHTML; render(); setStatus('Sample dimuat'); });
+    btnClear.addEventListener('click', ()=>{ if(confirm('Kosongkan editor?')){ editor.value=''; render(); setStatus('Editor dikosongkan'); } });
+
+    btnExport.addEventListener('click', ()=>{
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([editor.value || $('#sampleHtml').innerHTML], {type:'text/html;charset=utf-8'}));
+      a.download = 'source.html'; a.click(); URL.revokeObjectURL(a.href);
+      setStatus('Diekspor');
+    });
+
+    fileInput.addEventListener('change', async (e)=>{
+      const f = e.target.files[0]; if(!f) return; const text = await f.text(); editor.value = text; render(); setStatus(`Diimpor: ${f.name}`);
+    });
+
+    // Tombol expand/collapse sekarang mengubah SOURCE (kiri)
+    btnExpandAll.addEventListener('click', expandInSource);
+    btnCollapseAll.addEventListener('click', collapseInSource);
+
+    editor.addEventListener('input', ()=>{ if(liveToggle.checked) render(); });
+    document.addEventListener('keydown', (e)=>{
+      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){ e.preventDefault(); render(); }
+    });
+
+    (function init(){
+      editor.value = '<!-- Tulis HTML atau Markdown di sini -->\n\n# Selamat datang!\n\nCoba tombol **Sample**, lalu *Expand all* / *Collapse all*.\n\n<small>Semua proses hanya di browser — tidak ada backend.</small>';
+      render();
+    })();
+  </script>
+</body>
+</html>

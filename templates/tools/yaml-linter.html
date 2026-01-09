@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YAML Linter & Auto-Fix</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+
+  <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" integrity="sha384-zaeBlB/vwYsDRSlFajnDd7OydJ0cWk+c2OWybl3eSUf6hW2EbhlCsQPqKr3gkznT" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" integrity="sha384-eZTPTN0EvJdn23s24UDYJmUM2T7C2ZFa3qFLypeBruJv8mZeTusKUAO/j5zPAQ6l" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/xq-light.min.css" integrity="sha384-21YYCAifT7UWaL8rHQGO2iB0kLBA86V1abWmj1MoQepudCoVGVaxooPbkA4YX5XS" crossorigin="anonymous">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <script src="{{ url_for('static', filename='js/axios.min.js') }}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js" integrity="sha384-ZYmwuq4n2gOcNxMSiJ6jyTj+BbIrilr7p6dlq6q5nmSWKmsH9UU4K1qqjycMkfmR" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js" integrity="sha384-9q49Jm3hZMwxEMLImsxPxLiaptHpFz1PVa26Dg6SVIO+rj5kx0cgOM2+4ikKJFH9" crossorigin="anonymous"></script>
+
+  <style>
+    /* CSS Bridge untuk Dark Mode */
+    body {
+        background-color: var(--bg);
+        color: var(--text);
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    .main-card {
+        background-color: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+
+    /* Buttons */
+    .btn-action {
+        background-color: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        transition: 0.2s;
+    }
+    .btn-action:hover {
+        background-color: var(--btn-hover);
+        color: var(--text);
+    }
+
+    /* CodeMirror Customization */
+    .CodeMirror {
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        height: 450px;
+        font-size: 14px;
+        font-family: monospace;
+    }
+    
+    /* Highlight Baris Error/Warning di Editor */
+    .line-error-background { background-color: rgba(220, 38, 38, 0.2) !important; } /* Red */
+    .line-warning-background { background-color: rgba(234, 179, 8, 0.2) !important; } /* Yellow */
+
+    /* Result Box */
+    .result-box {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+    }
+    .res-success { background-color: rgba(16, 185, 129, 0.1); border: 1px solid var(--ok); color: var(--ok); }
+    .res-warn { background-color: rgba(234, 179, 8, 0.1); border: 1px solid var(--warn); color: var(--warn); }
+    .res-error { background-color: rgba(239, 68, 68, 0.1); border: 1px solid var(--err); color: var(--err); }
+
+    /* Spinner */
+    .spinner {
+        width: 1rem; height: 1rem;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.75s linear infinite;
+        display: inline-block;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 font-sans">
+
+  <div class="container mx-auto max-w-5xl">
+    
+    <header class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-2">
+            <i class="bi bi-file-earmark-code text-pink-500"></i> YAML Linter
+        </h1>
+        <p class="mt-1 opacity-70">Periksa sintaks dan perbaiki format YAML secara otomatis.</p>
+      </div>
+      
+            <div class="flex gap-2">
+                <button id="btnTheme" class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm">🌞 Light</button>
+                <a href="{{ url_for('routes.landing') }}"
+                   class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+    </header>
+
+    <div class="main-card rounded-xl shadow-lg p-6">
+      
+      <div class="mb-4">
+        <label for="yamlContent" class="block font-bold mb-2 opacity-90">Konten YAML</label>
+        <textarea id="yamlContent">---
+# Contoh YAML (Paste kode Anda di sini)
+version: "1.0"
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    restart: always</textarea>
+      </div>
+
+      <div class="flex flex-wrap gap-3 items-center">
+        
+        <button id="lintButton" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg shadow-md font-semibold flex items-center gap-2 transition transform active:scale-95">
+            <i class="bi bi-check-circle"></i> Periksa YAML
+            <span id="lintSpinner" class="spinner hidden"></span>
+        </button>
+
+        <button id="fixButton" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg shadow-md font-semibold flex items-center gap-2 transition transform active:scale-95">
+            <i class="bi bi-magic"></i> Auto-Fix
+            <span id="fixSpinner" class="spinner hidden"></span>
+        </button>
+
+        <button id="clearButton" class="btn-action px-4 py-2.5 rounded-lg font-semibold text-red-500 hover:text-red-600 ml-auto" title="Bersihkan Editor">
+            <i class="bi bi-trash"></i>
+        </button>
+
+      </div>
+
+      <div id="resultsContainer"></div>
+
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // 1. Inisialisasi CodeMirror
+        const textArea = document.getElementById('yamlContent');
+        const editor = CodeMirror.fromTextArea(textArea, {
+            lineNumbers: true,
+            mode: 'yaml',
+            theme: 'xq-light', // Default light theme
+            lineWrapping: true,
+            indentUnit: 2,
+            tabSize: 2
+        });
+
+        // 2. Logic Sinkronisasi Tema CodeMirror dengan Dark Mode Sistem
+        const syncEditorTheme = () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                editor.setOption('theme', 'material-darker');
+            } else {
+                editor.setOption('theme', 'xq-light');
+            }
+        };
+        // Jalankan saat load & saat tombol tema diklik
+        syncEditorTheme(); 
+        document.getElementById('btnTheme').addEventListener('click', () => {
+            setTimeout(syncEditorTheme, 50); // Delay sedikit agar atribut HTML berubah dulu
+        });
+
+
+        // 3. Elements
+        const lintButton = document.getElementById('lintButton');
+        const fixButton = document.getElementById('fixButton');
+        const clearButton = document.getElementById('clearButton');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const lintSpinner = document.getElementById('lintSpinner');
+        const fixSpinner = document.getElementById('fixSpinner');
+
+        // Helper: Bersihkan Highlight Baris
+        const clearMarks = () => {
+            editor.eachLine(line => {
+                editor.removeLineClass(line, 'background', 'line-error-background');
+                editor.removeLineClass(line, 'background', 'line-warning-background');
+            });
+        };
+
+        // 4. LINT FUNCTION
+        lintButton.addEventListener('click', () => {
+            const content = editor.getValue();
+            if (!content.trim()) {
+                resultsContainer.innerHTML = '<div class="result-box res-warn">Konten YAML tidak boleh kosong.</div>';
+                return;
+            }
+
+            lintSpinner.classList.remove('hidden');
+            lintButton.disabled = true;
+            resultsContainer.innerHTML = '';
+            clearMarks();
+
+            axios.post("{{ url_for('routes.yaml_linter') }}", { content: content })
+                .then(response => {
+                    const data = response.data;
+                    if (data.success) {
+                        const res = data.results;
+                        
+                        if (res.status === 'PERFECT') {
+                            resultsContainer.innerHTML = `
+                                <div class="result-box res-success flex items-center gap-3">
+                                    <i class="bi bi-check-circle-fill text-xl"></i>
+                                    <div>
+                                        <strong>VALID & BERSIH!</strong><br>
+                                        Tidak ada masalah sintaks atau gaya penulisan ditemukan.
+                                    </div>
+                                </div>`;
+                        } 
+                        else if (res.status === 'VALID_WITH_ISSUES') {
+                            let html = `
+                                <div class="result-box res-warn mb-4">
+                                    <div class="flex items-center gap-2 font-bold text-lg mb-2">
+                                        <i class="bi bi-exclamation-triangle-fill"></i> Valid, tapi ada catatan:
+                                    </div>
+                                    <ul class="list-none space-y-2">`;
+                            
+                            res.problems.forEach(p => {
+                                const lineIdx = p.line - 1;
+                                if (lineIdx >= 0) {
+                                    const bgClass = p.level === 'error' ? 'line-error-background' : 'line-warning-background';
+                                    editor.addLineClass(lineIdx, 'background', bgClass);
+                                }
+                                const badgeColor = p.level === 'error' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-800';
+                                html += `
+                                    <li class="p-2 rounded bg-white/5 border border-black/10 flex items-start gap-2">
+                                        <span class="px-2 py-0.5 rounded text-xs font-bold uppercase ${badgeColor}">${p.level}</span>
+                                        <span>Baris <strong>${p.line}</strong>: ${p.message}</span>
+                                    </li>`;
+                            });
+                            html += `</ul></div>`;
+                            resultsContainer.innerHTML = html;
+                        } 
+                        else if (res.status === 'INVALID_SYNTAX') {
+                            resultsContainer.innerHTML = `
+                                <div class="result-box res-error">
+                                    <div class="flex items-center gap-2 font-bold text-lg mb-2">
+                                        <i class="bi bi-x-octagon-fill"></i> YAML TIDAK VALID
+                                    </div>
+                                    <p class="font-mono text-sm bg-black/10 p-3 rounded">${res.error_message}</p>
+                                </div>`;
+                        }
+                    } else {
+                        resultsContainer.innerHTML = `<div class="result-box res-error">${data.error}</div>`;
+                    }
+                })
+                .catch(err => {
+                    const msg = err.response?.data?.error || "Gagal terhubung ke server.";
+                    resultsContainer.innerHTML = `<div class="result-box res-error">Error: ${msg}</div>`;
+                })
+                .finally(() => {
+                    lintSpinner.classList.add('hidden');
+                    lintButton.disabled = false;
+                });
+        });
+
+        // 5. AUTO-FIX FUNCTION
+        fixButton.addEventListener('click', () => {
+            const content = editor.getValue();
+            if (!content.trim()) return;
+
+            fixSpinner.classList.remove('hidden');
+            fixButton.disabled = true;
+
+            axios.post("{{ url_for('routes.yaml_autofix') }}", { content: content })
+                .then(response => {
+                    const data = response.data;
+                    if (data.success && data.fixed_content) {
+                        editor.setValue(data.fixed_content);
+                        // Jalankan lint ulang otomatis untuk konfirmasi
+                        lintButton.click(); 
+                    } else {
+                        resultsContainer.innerHTML = `<div class="result-box res-error">Gagal melakukan auto-fix: ${data.error}</div>`;
+                    }
+                })
+                .catch(err => {
+                    const msg = err.response?.data?.error || "Gagal auto-fix.";
+                    resultsContainer.innerHTML = `<div class="result-box res-error">${msg}</div>`;
+                })
+                .finally(() => {
+                    fixSpinner.classList.add('hidden');
+                    fixButton.disabled = false;
+                });
+        });
+
+        // 6. CLEAR
+        clearButton.addEventListener('click', () => {
+            editor.setValue('');
+            resultsContainer.innerHTML = '';
+            clearMarks();
+        });
+
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Chmod Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+
+  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <style>
+    /* CSS Bridge */
+    body {
+        background-color: var(--bg);
+        color: var(--text);
+        padding-top: 80px; 
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Navbar Custom */
+    .navbar {
+        background-color: var(--panel) !important;
+        border-bottom: 1px solid var(--border);
+        transition: background-color 0.3s;
+    }
+    .navbar-brand { color: var(--text) !important; }
+
+    /* Card Styling */
+    .card {
+        background-color: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+
+    /* Form Controls */
+    .form-control {
+        background-color: var(--bg);
+        border-color: var(--border);
+        color: var(--text);
+    }
+    .form-control:focus {
+        background-color: var(--bg);
+        color: var(--text);
+        border-color: var(--btn-primary);
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    /* Result Box Typography */
+    .result-box { 
+        font-family: monospace; 
+        font-size: 1.5rem; 
+        text-align: center;
+        letter-spacing: 2px;
+        font-weight: bold;
+    }
+
+    /* Permission Grid Styling */
+    .perm-header { 
+        font-weight: bold; 
+        text-align: center; 
+        color: var(--text); /* Diubah agar visible di dark mode */
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    /* Checkbox Row Styling */
+    .perm-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 5px;
+        align-items: center;
+        transition: background 0.2s;
+        border: 1px solid transparent;
+    }
+    .perm-row:hover { 
+        background-color: var(--btn-hover); 
+        border-color: var(--border);
+    }
+    
+    /* Checkbox Label */
+    .perm-label { cursor: pointer; flex-grow: 1; margin-left: 10px; font-weight: 600; }
+    
+    /* Custom Colors for Labels (Adaptive) */
+    .label-read { color: #10b981; } /* Green */
+    .label-write { color: #f59e0b; } /* Orange */
+    .label-exec { color: #ef4444; }  /* Red */
+
+    /* Custom Checkbox Colors */
+    .cb-read:checked { accent-color: #10b981; }
+    .cb-write:checked { accent-color: #f59e0b; }
+    .cb-exec:checked { accent-color: #ef4444; }
+
+    /* Octal Result Badges */
+    .octal-badge {
+        font-size: 1.5rem;
+        font-weight: bold;
+        padding: 5px 20px;
+        border-radius: 12px;
+        background-color: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--btn-primary); /* Warna aksen agar terlihat */
+        min-width: 60px;
+        display: inline-block;
+        text-align: center;
+    }
+
+    /* Text Overrides for Visibility */
+    .text-muted-custom { color: var(--muted) !important; }
+    .text-title { color: var(--btn-primary); }
+
+    /* Buttons */
+    .btn-secondary {
+        background-color: var(--bg);
+        border-color: var(--border);
+        color: var(--text);
+    }
+    .btn-secondary:hover {
+        background-color: var(--btn-hover);
+        border-color: var(--border);
+        color: var(--text);
+    }
+    #btnTheme { border: 1px solid var(--border); color: var(--text); }
+    #btnTheme:hover { background-color: var(--btn-hover); }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-expand fixed-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="{{ url_for('routes.landing') }}">
+        <img src="{{ url_for('static', filename='images/logo.png') }}"
+             alt="Logo" class="d-inline-block align-text-top"
+             style="margin-right: 8px; max-height: 30px;">
+        Chmod Calculator
+      </a>
+      <div class="ms-auto">
+         <button id="btnTheme" class="btn btn-sm">🌞 Light</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-0 text-title">🛠️ Chmod Calculator</h3>
+            <p class="text-muted-custom small mb-0">Konversi izin file Linux (Symbolic ↔ Numeric)</p>
+        </div>
+                    <div class="col-md-4 text-end">
+                        <a href="{{ url_for('routes.landing') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-left"></i> Back
+                        </a>
+                    </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+
+        <div class="row g-4">
+            
+            <div class="col-md-4">
+                <div class="card h-100 shadow-none bg-transparent border-0">
+                    <div class="perm-header">OWNER (u)</div>
+                    
+                    <div class="perm-row">
+                        <input type="checkbox" id="owner_read" class="perm-cb cb-read form-check-input" value="400">
+                        <label for="owner_read" class="perm-label label-read">Read (4)</label>
+                    </div>
+                    <div class="perm-row">
+                        <input type="checkbox" id="owner_write" class="perm-cb cb-write form-check-input" value="200">
+                        <label for="owner_write" class="perm-label label-write">Write (2)</label>
+                    </div>
+                    <div class="perm-row">
+                        <input type="checkbox" id="owner_execute" class="perm-cb cb-exec form-check-input" value="100">
+                        <label for="owner_execute" class="perm-label label-exec">Execute (1)</label>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <span id="octal_owner" class="octal-badge">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 border-start border-end" style="border-color: var(--border) !important;">
+                <div class="card h-100 shadow-none bg-transparent border-0">
+                    <div class="perm-header">GROUP (g)</div>
+                    
+                    <div class="perm-row">
+                        <input type="checkbox" id="group_read" class="perm-cb cb-read form-check-input" value="40">
+                        <label for="group_read" class="perm-label label-read">Read (4)</label>
+                    </div>
+                    <div class="perm-row">
+                        <input type="checkbox" id="group_write" class="perm-cb cb-write form-check-input" value="20">
+                        <label for="group_write" class="perm-label label-write">Write (2)</label>
+                    </div>
+                    <div class="perm-row">
+                        <input type="checkbox" id="group_execute" class="perm-cb cb-exec form-check-input" value="10">
+                        <label for="group_execute" class="perm-label label-exec">Execute (1)</label>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <span id="octal_group" class="octal-badge">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 shadow-none bg-transparent border-0">
+                    <div class="perm-header">PUBLIC (o)</div>
+                    
+                    <div class="perm-row">
+                        <input type="checkbox" id="public_read" class="perm-cb cb-read form-check-input" value="4">
+                        <label for="public_read" class="perm-label label-read">Read (4)</label>
+                    </div>
+                    <div class="perm-row">
+                        <input type="checkbox" id="public_write" class="perm-cb cb-write form-check-input" value="2">
+                        <label for="public_write" class="perm-label label-write">Write (2)</label>
+                    </div>
+                    <div class="perm-row">
+                        <input type="checkbox" id="public_execute" class="perm-cb cb-exec form-check-input" value="1">
+                        <label for="public_execute" class="perm-label label-exec">Execute (1)</label>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <span id="octal_public" class="octal-badge">0</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <hr class="my-4" style="border-color: var(--border);">
+
+        <div class="row g-4 justify-content-center">
+          <div class="col-md-5">
+            <label for="numeric" class="form-label text-muted-custom small fw-bold text-center w-100">NUMERIC (Octal)</label>
+            <input type="text" id="numeric" class="form-control result-box label-read" maxlength="3" value="000">
+          </div>
+          <div class="col-md-5">
+            <label for="symbolic" class="form-label text-muted-custom small fw-bold text-center w-100">SYMBOLIC (ls -l)</label>
+            <input type="text" id="symbolic" class="form-control result-box label-write" maxlength="10" value="---------">
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Logic ---
+    let syncing = false;
+
+    // Helper: Update Individual Octal Badges
+    function updateBadges(o, g, p) {
+        document.getElementById('octal_owner').textContent = o;
+        document.getElementById('octal_group').textContent = g;
+        document.getElementById('octal_public').textContent = p;
+    }
+
+    function fromCheckbox() {
+      if (syncing) return;
+      syncing = true;
+
+      const scopes = ['owner','group','public'];
+      const vals = {owner:0, group:0, public:0};
+
+      scopes.forEach(s => {
+        if (document.getElementById(s+'_read').checked)  vals[s] += 4;
+        if (document.getElementById(s+'_write').checked) vals[s] += 2;
+        if (document.getElementById(s+'_execute').checked) vals[s] += 1;
+      });
+
+      // Update Numeric
+      const numVal = `${vals.owner}${vals.group}${vals.public}`;
+      document.getElementById('numeric').value = numVal;
+      updateBadges(vals.owner, vals.group, vals.public);
+
+      // Update Symbolic
+      document.getElementById('symbolic').value =
+        scopes.map(s =>
+          (document.getElementById(s+'_read').checked  ? 'r':'-') +
+          (document.getElementById(s+'_write').checked ? 'w':'-') +
+          (document.getElementById(s+'_execute').checked ? 'x':'-')
+        ).join('');
+
+      syncing = false;
+    }
+
+    function fromNumeric() {
+      if (syncing) return;
+      syncing = true;
+
+      let txt = document.getElementById('numeric').value;
+      txt = txt.replace(/[^0-7]/g,'').slice(0,3); 
+      
+      const padded = txt.padStart(3,'0').slice(-3);
+      const [o,g,p] = padded.split('').map(d=>parseInt(d,10));
+
+      updateBadges(o,g,p);
+
+      ['owner','group','public'].forEach((s,i) => {
+        const v = [o,g,p][i];
+        document.getElementById(s+'_read').checked    = !!(v & 4);
+        document.getElementById(s+'_write').checked   = !!(v & 2);
+        document.getElementById(s+'_execute').checked = !!(v & 1);
+      });
+
+      document.getElementById('symbolic').value =
+        ['owner','group','public'].map(s =>
+          (document.getElementById(s+'_read').checked  ? 'r':'-') +
+          (document.getElementById(s+'_write').checked ? 'w':'-') +
+          (document.getElementById(s+'_execute').checked ? 'x':'-')
+        ).join('');
+
+      syncing = false;
+    }
+
+    function fromSymbolic() {
+      if (syncing) return;
+      syncing = true;
+
+      let txt = document.getElementById('symbolic').value;
+      txt = txt.replace(/[^rwx\-]/g,'').slice(0,9);
+      
+      const padded = txt.padEnd(9,'-');
+
+      ['owner','group','public'].forEach((s,i) => {
+        const base = padded.slice(i*3, i*3+3);
+        document.getElementById(s+'_read').checked    = base[0]==='r';
+        document.getElementById(s+'_write').checked   = base[1]==='w';
+        document.getElementById(s+'_execute').checked = base[2]==='x';
+      });
+
+      const vals = ['owner','group','public'].map(s => {
+        const r = document.getElementById(s+'_read').checked  ? 4:0;
+        const w = document.getElementById(s+'_write').checked ? 2:0;
+        const x = document.getElementById(s+'_execute').checked? 1:0;
+        return r+w+x;
+      });
+      
+      const numVal = vals.join('');
+      document.getElementById('numeric').value = numVal;
+      updateBadges(vals[0], vals[1], vals[2]);
+
+      syncing = false;
+    }
+
+    // Bind Events
+    document.querySelectorAll('.perm-cb').forEach(cb => cb.addEventListener('change', fromCheckbox));
+    document.getElementById('numeric').addEventListener('input', fromNumeric);
+    document.getElementById('symbolic').addEventListener('input', fromSymbolic);
+  </script>
+
+  <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

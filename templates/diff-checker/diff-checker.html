@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diff Checker Pro</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  
+  <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+  
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/7.0.0/diff.min.js"
+    integrity="sha384-UeyWE2TKK+s95khAzg8xeTD88VbztEqt1mbxzkzwAPM32TPJSj8Lyg7E7tVXAyRL"
+    crossorigin="anonymous" 
+    referrerpolicy="no-referrer">
+  </script>
+
+  <style>
+    /* --- CSS Bridge untuk Theme --- */
+    body {
+        background-color: var(--bg);
+        color: var(--text);
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Panel utama */
+    .diff-card {
+        background-color: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+
+    /* Area Input Text */
+    .editor-container {
+        border: 1px solid var(--border);
+        background-color: var(--bg);
+        transition: border-color 0.2s;
+    }
+    .editor-container:focus-within {
+        border-color: var(--btn-primary);
+        box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
+    }
+
+    /* Line Numbers */
+    .line-nums {
+        background-color: var(--ln-bg);
+        color: var(--muted);
+        border-right: 1px solid var(--border);
+    }
+
+    /* Textarea */
+    textarea {
+        background-color: transparent;
+        color: var(--text);
+    }
+    /* Scrollbar cantik */
+    textarea::-webkit-scrollbar { width: 8px; }
+    textarea::-webkit-scrollbar-track { background: var(--bg); }
+    textarea::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 4px; opacity: 0.5; }
+
+    /* --- Styles untuk Hasil Diff --- */
+    table { width: 100%; border-collapse: collapse; }
+    
+    th {
+        background-color: var(--ln-bg);
+        color: var(--text);
+        border-bottom: 2px solid var(--border);
+        text-align: left;
+        padding: 10px;
+    }
+    
+    td {
+        padding: 4px 8px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+        font-family: monospace;
+        font-size: 0.9rem;
+    }
+
+    /* Border tengah pemisah original vs changed */
+    .border-r-theme { border-right: 1px solid var(--border); }
+
+    /* Line Number di Hasil */
+    .diff-ln {
+        color: var(--muted);
+        user-select: none;
+        text-align: right;
+        padding-right: 10px;
+        width: 40px;
+        display: inline-block;
+    }
+
+    /* Warna Diff (Adaptive Dark/Light) */
+    /* Light Mode Defaults */
+    :root {
+        --diff-add-bg: #dcfce7; /* Green 100 */
+        --diff-add-text: #166534; /* Green 800 */
+        --diff-rem-bg: #fee2e2; /* Red 100 */
+        --diff-rem-text: #991b1b; /* Red 800 */
+    }
+    /* Dark Mode Overrides */
+    [data-theme="dark"] {
+        --diff-add-bg: rgba(22, 101, 52, 0.3);
+        --diff-add-text: #86efac;
+        --diff-rem-bg: rgba(153, 27, 27, 0.3);
+        --diff-rem-text: #fca5a5;
+    }
+
+    .diff-added { background-color: var(--diff-add-bg); color: var(--diff-add-text); border-radius: 2px; }
+    .diff-removed { background-color: var(--diff-rem-bg); color: var(--diff-rem-text); border-radius: 2px; }
+    
+    /* Baris penuh yang berubah */
+    .row-added { background-color: rgba(34, 197, 94, 0.05); }
+    .row-removed { background-color: rgba(239, 68, 68, 0.05); }
+
+    /* Tombol Utility */
+    .btn-action {
+        background-color: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+    .btn-action:hover { background-color: var(--btn-hover); }
+  </style>
+</head>
+<body class="min-h-screen font-sans p-4 md:p-8">
+
+  <div class="container mx-auto">
+    
+    <header class="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
+      <div>
+        <h1 class="text-3xl font-bold flex items-center gap-2">
+            <i class="bi bi-file-diff text-blue-500"></i> Diff Checker
+        </h1>
+        <p class="opacity-75 mt-1">Bandingkan perbedaan dua teks secara side-by-side.</p>
+      </div>
+      
+            <div class="flex gap-2">
+                <button id="btnTheme" class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm">🌞 Light</button>
+                <a href="{{ url_for('routes.landing') }}"
+                   class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+    </header>
+
+    <main class="diff-card rounded-xl shadow-lg p-4 md:p-6 mb-8">
+        
+        <div class="flex flex-wrap justify-end gap-2 mb-4">
+            <button onclick="fillSample()" class="btn-action px-3 py-1.5 rounded text-sm flex items-center gap-2" title="Isi contoh data">
+                <i class="bi bi-magic"></i> Sample
+            </button>
+            <button onclick="swapText()" class="btn-action px-3 py-1.5 rounded text-sm flex items-center gap-2" title="Tukar posisi teks">
+                <i class="bi bi-arrow-left-right"></i> Swap
+            </button>
+            <button onclick="clearText()" class="btn-action px-3 py-1.5 rounded text-sm flex items-center gap-2 text-red-500 hover:text-red-600" title="Hapus semua">
+                <i class="bi bi-trash"></i> Clear
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="flex flex-col">
+                <label for="originalText" class="font-bold mb-2 opacity-90 flex justify-between">
+                    <span>Original Text</span>
+                    <span class="text-xs opacity-50 font-normal">(Kiri)</span>
+                </label>
+                <div class="editor-container flex rounded-lg overflow-hidden h-80">
+                    <div id="lineNumsOrig" class="line-nums p-3 text-right text-sm font-mono leading-relaxed select-none w-12 overflow-hidden"></div>
+                    <textarea id="originalText" placeholder="Tempel teks asli di sini..." wrap="off" 
+                              class="flex-1 p-3 border-none outline-none text-sm font-mono leading-relaxed resize-none whitespace-pre overflow-auto"></textarea>
+                </div>
+            </div>
+
+            <div class="flex flex-col">
+                <label for="changedText" class="font-bold mb-2 opacity-90 flex justify-between">
+                    <span>Changed Text</span>
+                    <span class="text-xs opacity-50 font-normal">(Kanan)</span>
+                </label>
+                <div class="editor-container flex rounded-lg overflow-hidden h-80">
+                    <div id="lineNumsChanged" class="line-nums p-3 text-right text-sm font-mono leading-relaxed select-none w-12 overflow-hidden"></div>
+                    <textarea id="changedText" placeholder="Tempel teks baru di sini..." wrap="off" 
+                              class="flex-1 p-3 border-none outline-none text-sm font-mono leading-relaxed resize-none whitespace-pre overflow-auto"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-center mt-6">
+            <button onclick="compareText()" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg text-lg font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2 transform active:scale-95">
+              <i class="bi bi-search"></i> Bandingkan Sekarang
+            </button>
+        </div>
+    </main>
+
+    
+    <section id="result-section" class="diff-card rounded-xl shadow-lg hidden overflow-hidden">
+        <div class="p-4 border-b border-[var(--border)] bg-[var(--ln-bg)] flex justify-between items-center">
+            <h3 class="font-bold text-lg">Hasil Perbandingan</h3>
+            <span class="text-xs px-2 py-1 rounded border border-[var(--border)] bg-[var(--bg)]">Mode: Side-by-Side</span>
+        </div>
+        <div id="diffResult" class="w-full overflow-auto max-h-[500px]">
+            </div>
+    </section>
+
+  </div>
+
+  <script>
+    // --- DOM Elements ---
+    const originalTA = document.getElementById('originalText');
+    const changedTA  = document.getElementById('changedText');
+    const lineNumsOrig = document.getElementById('lineNumsOrig');
+    const lineNumsChanged = document.getElementById('lineNumsChanged');
+    const diffResult = document.getElementById('diffResult');
+    const resultSection = document.getElementById('result-section');
+
+    // --- Line Numbers Logic ---
+    function updateLineNumbers(textarea, lineNumDiv) {
+      const lineCount = textarea.value.split('\n').length;
+      // Gunakan Array.from agar performa lebih baik drpd loop manual string concat
+      lineNumDiv.innerHTML = Array.from({length: lineCount}, (_, i) => i + 1).join('<br>');
+    }
+
+    // --- Sync Scroll Logic (2 Arah) ---
+    let isSyncingLeft = false;
+    let isSyncingRight = false;
+
+    originalTA.addEventListener('scroll', function() {
+        if (!isSyncingLeft) {
+            isSyncingRight = true;
+            changedTA.scrollTop = this.scrollTop;
+            changedTA.scrollLeft = this.scrollLeft;
+            lineNumsOrig.scrollTop = this.scrollTop;
+        }
+        isSyncingLeft = false;
+    });
+
+    changedTA.addEventListener('scroll', function() {
+        if (!isSyncingRight) {
+            isSyncingLeft = true;
+            originalTA.scrollTop = this.scrollTop;
+            originalTA.scrollLeft = this.scrollLeft;
+            lineNumsChanged.scrollTop = this.scrollTop;
+        }
+        isSyncingRight = false;
+    });
+
+    // Input Listeners
+    originalTA.addEventListener('input', () => updateLineNumbers(originalTA, lineNumsOrig));
+    changedTA.addEventListener('input', () => updateLineNumbers(changedTA, lineNumsChanged));
+
+    // Init Line Numbers
+    updateLineNumbers(originalTA, lineNumsOrig);
+    updateLineNumbers(changedTA, lineNumsChanged);
+
+    // --- Actions ---
+    function clearText() {
+        originalTA.value = '';
+        changedTA.value = '';
+        updateLineNumbers(originalTA, lineNumsOrig);
+        updateLineNumbers(changedTA, lineNumsChanged);
+        resultSection.classList.add('hidden');
+    }
+
+    function swapText() {
+        const temp = originalTA.value;
+        originalTA.value = changedTA.value;
+        changedTA.value = temp;
+        updateLineNumbers(originalTA, lineNumsOrig);
+        updateLineNumbers(changedTA, lineNumsChanged);
+    }
+
+    function fillSample() {
+        originalTA.value = `DevOps Tools Hub
+Fitur:
+- Repo Scanner
+- JSON Formatter
+- Diff Checker
+- Versi 1.0`;
+        changedTA.value = `DevOps Tools Hub Pro
+Fitur Unggulan:
+- Repo Scanner (Enhanced)
+- JSON Beautifier
+- Diff Checker
+- Dark Mode Support
+- Versi 2.0`;
+        updateLineNumbers(originalTA, lineNumsOrig);
+        updateLineNumbers(changedTA, lineNumsChanged);
+    }
+
+    // --- DIFF LOGIC ---
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function compareText() {
+        resultSection.classList.remove('hidden');
+        
+        const original = originalTA.value;
+        const changed = changedTA.value;
+        
+        const linesOrig = original.split("\n");
+        const linesChanged = changed.split("\n");
+        const maxLines = Math.max(linesOrig.length, linesChanged.length);
+
+        let tableRows = '';
+        let lnOrig = 1;
+        let lnChanged = 1;
+
+        for (let i = 0; i < maxLines; i++) {
+            const lineA = linesOrig[i] !== undefined ? linesOrig[i] : null;
+            const lineB = linesChanged[i] !== undefined ? linesChanged[i] : null;
+
+            let colA = '', colB = '';
+            let classRowA = '', classRowB = '';
+
+            // Kasus 1: Baris ada di kedua sisi
+            if (lineA !== null && lineB !== null) {
+                if (lineA === lineB) {
+                    // Sama Persis
+                    colA = `<span class="diff-ln">${lnOrig++}</span> <span>${escapeHtml(lineA)}</span>`;
+                    colB = `<span class="diff-ln">${lnChanged++}</span> <span>${escapeHtml(lineB)}</span>`;
+                } else {
+                    // Berbeda (Lakukan Diff Karakter)
+                    const charDiff = Diff.diffChars(lineA, lineB);
+                    let htmlA = '', htmlB = '';
+                    
+                    charDiff.forEach(part => {
+                        const val = escapeHtml(part.value);
+                        if (part.added) {
+                            htmlB += `<span class="diff-added font-bold">${val}</span>`;
+                        } else if (part.removed) {
+                            htmlA += `<span class="diff-removed font-bold">${val}</span>`;
+                        } else {
+                            htmlA += `<span>${val}</span>`;
+                            htmlB += `<span>${val}</span>`;
+                        }
+                    });
+
+                    classRowA = 'row-removed';
+                    classRowB = 'row-added';
+                    colA = `<span class="diff-ln">${lnOrig++}</span> <span>${htmlA}</span>`;
+                    colB = `<span class="diff-ln">${lnChanged++}</span> <span>${htmlB}</span>`;
+                }
+            } 
+            // Kasus 2: Baris dihapus (Hanya ada di A)
+            else if (lineA !== null) {
+                classRowA = 'row-removed';
+                colA = `<span class="diff-ln">${lnOrig++}</span> <span class="diff-removed">${escapeHtml(lineA)}</span>`;
+                colB = `<span class="diff-ln"></span>`; // Kosong di kanan
+            } 
+            // Kasus 3: Baris baru (Hanya ada di B)
+            else if (lineB !== null) {
+                classRowB = 'row-added';
+                colA = `<span class="diff-ln"></span>`; // Kosong di kiri
+                colB = `<span class="diff-ln">${lnChanged++}</span> <span class="diff-added">${escapeHtml(lineB)}</span>`;
+            }
+
+            tableRows += `
+                <tr>
+                    <td class="${classRowA} border-r-theme w-1/2">${colA}</td>
+                    <td class="${classRowB} w-1/2">${colB}</td>
+                </tr>
+            `;
+        }
+
+        diffResult.innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th class="w-1/2 border-r-theme">Original Text</th>
+                        <th class="w-1/2">Changed Text</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRows}
+                </tbody>
+            </table>
+        `;
+        
+        // Auto scroll ke hasil
+        setTimeout(() => resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
+  </script>
+</body>
+</html>

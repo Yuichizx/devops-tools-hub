@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Time Converter</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+
+  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet" />
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <style>
+    /* --- CSS Bridge: Menghubungkan Bootstrap dengan Theme Variables --- */
+    
+    body {
+        background-color: var(--bg);
+        color: var(--text);
+        padding-top: 80px; /* Space untuk navbar */
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Navbar Custom */
+    .navbar {
+        background-color: var(--panel) !important;
+        border-bottom: 1px solid var(--border);
+        transition: background-color 0.3s;
+    }
+    .navbar-brand { color: var(--text) !important; }
+
+    /* Card Styling */
+    .card {
+        background-color: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+
+    /* Form Controls (Inputs & Selects) */
+    .form-control, .form-select {
+        background-color: var(--bg);
+        border-color: var(--border);
+        color: var(--text);
+    }
+    .form-control:focus, .form-select:focus {
+        background-color: var(--bg);
+        color: var(--text);
+        border-color: var(--btn-primary);
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    /* Input Readonly (Output) */
+    .form-control[readonly] {
+        background-color: var(--btn-hover); /* Sedikit lebih gelap/terang */
+        opacity: 1;
+    }
+
+    /* Text Utilities */
+    .text-muted { color: var(--muted) !important; }
+    label { color: var(--text); opacity: 0.9; }
+
+    /* Buttons */
+    .btn-secondary {
+        background-color: var(--bg);
+        border-color: var(--border);
+        color: var(--text);
+    }
+    .btn-secondary:hover {
+        background-color: var(--btn-hover);
+        border-color: var(--border);
+        color: var(--text);
+    }
+    
+    /* Theme Toggle Button */
+    #btnTheme {
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+    #btnTheme:hover { background-color: var(--btn-hover); }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-expand fixed-top">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="{{ url_for('routes.landing') }}">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" height="30" class="me-2">
+        DevOps Hub
+      </a>
+      
+      <div class="ms-auto">
+         <button id="btnTheme" class="btn btn-sm">🌞 Light</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+
+    <div class="card mx-auto shadow-lg" style="max-width:800px;">
+      <div class="card-body p-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h2">Time Converter</h1>
+      <a href="{{ url_for('routes.landing') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back
+      </a>
+    </div>
+
+        <hr class="mb-4" style="border-color: var(--border);">
+
+        <form id="timeConverterForm">
+          
+          <div class="row g-3">
+              <div class="col-md-6">
+                <label for="sourceTz" class="form-label fw-bold">Zona Waktu Asal</label>
+                <select id="sourceTz" class="form-select">
+                  <option value="local" selected>(Local Browser Time)</option>
+                  <option value="UTC">UTC (Coordinated Universal Time)</option>
+                  <option value="Asia/Jakarta">Jakarta (WIB)</option>
+                  <option value="Asia/Makassar">Makassar (WITA)</option>
+                  <option value="Asia/Jayapura">Jayapura (WIT)</option>
+                  <option value="Asia/Singapore">Singapore</option>
+                  <option value="Asia/Tokyo">Tokyo</option>
+                  <option value="Europe/London">London</option>
+                  <option value="America/New_York">New York</option>
+                  <option value="Australia/Sydney">Sydney</option>
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label for="targetTz" class="form-label fw-bold">Zona Waktu Tujuan</label>
+                <select id="targetTz" class="form-select">
+                  <option value="UTC" selected>UTC (Coordinated Universal Time)</option>
+                  <option value="Asia/Jakarta">Jakarta (WIB)</option>
+                  <option value="Asia/Makassar">Makassar (WITA)</option>
+                  <option value="Asia/Jayapura">Jayapura (WIT)</option>
+                  <option value="Asia/Singapore">Singapore</option>
+                  <option value="Asia/Tokyo">Tokyo</option>
+                  <option value="Europe/London">London</option>
+                  <option value="America/New_York">New York</option>
+                  <option value="Australia/Sydney">Sydney</option>
+                </select>
+              </div>
+
+              <div class="col-md-6">
+                <label for="localTime" class="form-label fw-bold">Waktu Input</label>
+                <input type="datetime-local" class="form-control" id="localTime" required>
+              </div>
+
+              <div class="col-md-6">
+                <label for="convertedTime" class="form-label fw-bold">Hasil Konversi</label>
+                <input type="text" id="convertedTime" class="form-control fw-bold" style="color: var(--ok);" readonly>
+              </div>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js" integrity="sha384-MPG/j0tMZel8D/wdSK2M2n+fUXFQ6lHE3r5wnJZ25xVC8KKtBOvT9BGMOmLfSxGT" crossorigin="anonymous"></script>
+  <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const { DateTime } = luxon;
+        const localInput = document.getElementById('localTime');
+        const srcSelect  = document.getElementById('sourceTz');
+        const tgtSelect  = document.getElementById('targetTz');
+        const output     = document.getElementById('convertedTime');
+
+        // 1. Set default value ke waktu sekarang (format: YYYY-MM-DDTHH:mm)
+        const now = DateTime.now();
+        localInput.value = now.toFormat("yyyy-MM-dd'T'HH:mm");
+
+        // 2. Fungsi Konversi
+        function convertTime() {
+          const val = localInput.value;
+          if (!val) { output.value = ''; return; }
+
+          let srcZone = srcSelect.value;
+          if (srcZone === 'local') {
+            srcZone = DateTime.local().zoneName;
+          }
+
+          // Parse ISO dari input
+          const dt = DateTime.fromISO(val, { zone: srcZone });
+          
+          // Konversi ke zona tujuan
+          const dt2 = dt.setZone(tgtSelect.value);
+
+          // Format Output yang user-friendly
+          // Contoh: 2023-10-25 14:30:00 (WIB)
+          output.value = dt2.toFormat('yyyy-MM-dd HH:mm:ss (ZZZZ)');
+        }
+
+        // 3. Event Listeners
+        [localInput, srcSelect, tgtSelect].forEach(el =>
+          el.addEventListener('input', convertTime)
+        );
+
+        // Jalankan sekali saat load
+        convertTime();
+    });
+  </script>
+</body>
+</html>

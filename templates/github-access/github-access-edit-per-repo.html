@@ -1,0 +1,175 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/github-access-theme.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="container mt-5">
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3 class="card-title mb-1"><i class="bi bi-pencil-square me-2"></i>Edit Role per Repositori</h3>
+                    <p class="text-muted mb-0">Atur role untuk pengguna <strong>{{ username }}</strong> di organisasi <strong>{{ org }}</strong>.</p>
+                </div>
+                <a href="{{ url_for('routes.github_access') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-lg me-1"></i> Batal
+                </a>
+            </div>
+
+            <form id="editPerRepoForm" method="POST" action="{{ url_for('routes.github_access_apply_roles') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="github_identifier" value="{{ username }}">
+                <input type="hidden" name="organization" value="{{ org }}">
+                
+                <div class="list-group">
+                    {% for repo in repos %}
+                    <div class="list-group-item">
+                        <div class="row align-items-center">
+                            <div class="col-md-6 fw-bold">
+                                {{ repo }}
+                                <!-- Kirim nama repo sebagai hidden input -->
+                                <input type="hidden" name="repositories" value="{{ repo }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="role_{{ loop.index }}" class="visually-hidden">Role for {{ repo }}</label>
+                                <select class="form-select" name="roles" id="role_{{ loop.index }}">
+                                    <option value="read" selected>Read</option>
+                                    <option value="triage">Triage</option>
+                                    <option value="write">Write</option>
+                                    <option value="maintain">Maintain</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="list-group-item text-muted">Tidak ada repositori yang valid untuk diproses.</div>
+                    {% endfor %}
+                </div>
+
+                {% if repos %}
+                <div class="d-grid mt-4">
+                    <button type="submit" id="applyButton" class="btn btn-primary btn-lg">
+                        <i class="bi bi-check-circle-fill me-1"></i> Apply All Roles
+                    </button>
+                </div>
+                {% endif %}
+            </form>
+
+            <!-- Area Hasil -->
+            <div id="resultCard" class="card mt-4 d-none">
+                <div class="card-body">
+                    <h5 class="card-title">Submission Result</h5>
+                    <ul id="resultList" class="list-unstyled mb-0"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Modal Konfirmasi -->
+<div class="modal fade" id="confirmationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Konfirmasi Aksi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmationModalBody">
+                <!-- Konten konfirmasi akan diisi oleh JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tidak, Kembali</button>
+                <button type="button" class="btn btn-primary" id="confirmApplyBtn">Ya, Terapkan</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('editPerRepoForm');
+    const applyButton = document.getElementById('applyButton');
+    const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+    const confirmApplyBtn = document.getElementById('confirmApplyBtn');
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        // Buat ringkasan perubahan untuk ditampilkan di modal
+        let summaryHtml = '<p>Apakah Anda yakin ingin menerapkan role berikut?</p><ul class="list-group">';
+        const repoInputs = form.querySelectorAll('input[name="repositories"]');
+        const roleSelects = form.querySelectorAll('select[name="roles"]');
+
+        repoInputs.forEach((repoInput, index) => {
+            const repoName = repoInput.value;
+            const roleName = roleSelects[index].options[roleSelects[index].selectedIndex].text;
+            summaryHtml += `<li class="list-group-item d-flex justify-content-between align-items-center">${repoName} <span class="badge bg-primary rounded-pill">${roleName}</span></li>`;
+        });
+        summaryHtml += '</ul>';
+        
+        document.getElementById('confirmationModalBody').innerHTML = summaryHtml;
+        confirmationModal.show();
+    });
+
+    confirmApplyBtn.addEventListener('click', () => {
+        confirmationModal.hide();
+        submitRoles();
+    });
+
+    async function submitRoles() {
+        const resultCard = document.getElementById('resultCard');
+        const resultList = document.getElementById('resultList');
+        const data = new FormData(form);
+
+        applyButton.disabled = true;
+        applyButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status"></span> Applying...`;
+
+        try {
+            const response = await fetch(form.action, { method: 'POST', body: data });
+            const json = await response.json();
+
+            resultList.innerHTML = '';
+            resultCard.classList.remove('d-none');
+
+            // Logika untuk menampilkan hasil (mirip dengan form bulk)
+            if (json.success && json.github_response) {
+                json.github_response.forEach(r => {
+                    const li = document.createElement('li');
+                    li.className = 'p-2 border-bottom';
+                    let icon = 'bi-info-circle-fill text-secondary';
+                    let msg = r.message;
+
+                    if (r.status === 'invited' || r.status === 'updated') {
+                        icon = 'bi-check-circle-fill text-success';
+                        msg = `${r.message} (Role: ${r.role?.toUpperCase() || '-'})`;
+                    } else if (r.status === 'skipped') {
+                        icon = 'bi-skip-forward-circle-fill text-info';
+                        msg = 'Sudah memiliki akses atau undangan tertunda.';
+                    } else if (r.status === 'failed') {
+                        icon = 'bi-x-circle-fill text-danger';
+                    }
+                    
+                    li.innerHTML = `<div class="d-flex align-items-center"><i class="bi ${icon} me-3"></i><div><strong>${r.repo}</strong>: ${msg}</div></div>`;
+                    resultList.appendChild(li);
+                });
+            } else {
+                resultList.innerHTML = `<li class="text-danger p-2">${json.error || 'Terjadi kesalahan.'}</li>`;
+            }
+
+        } catch (err) {
+            console.error(err);
+            resultList.innerHTML = `<li class="text-danger p-2">❌ Terjadi kesalahan tak terduga.</li>`;
+            resultCard.classList.remove('d-none');
+        } finally {
+            applyButton.disabled = false;
+            applyButton.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i> Apply All Roles`;
+        }
+    }
+});
+</script>
+{% endblock %}

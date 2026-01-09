@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ title or "JSON Formatter Tools" }}</title>
+
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+
+  <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <meta name="description" content="Collection of JSON conversion tools: Beautifier, JSON → Go Struct, and JSON → C# Model.">
+  <meta name="author" content="DevOps Tools Hub">
+
+  <style>
+    /* --- CSS Bridge: Connecting Tailwind with Theme Variables --- */
+    
+    body {
+        background-color: var(--bg);
+        color: var(--text);
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Card Styling */
+    .nav-card {
+        background-color: var(--panel);
+        border: 1px solid var(--border);
+        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+    
+    /* Card Title */
+    .nav-card h3 { color: var(--text); }
+    /* Card Description */
+    .nav-card p { color: var(--muted); }
+
+    /* Main Title */
+    h1 { color: var(--text) !important; }
+
+    /* Back Button */
+    .link-back {
+        color: var(--muted);
+        transition: color 0.2s;
+    }
+    .link-back:hover { color: var(--btn-primary); }
+
+    /* Theme Toggle Button */
+    .btn-theme {
+        background-color: var(--panel);
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+    .btn-theme:hover {
+        background-color: var(--btn-hover);
+    }
+  </style>
+</head>
+<body class="min-h-screen font-sans">
+  
+  <div class="container mx-auto px-4 py-10 max-w-5xl">
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 items-center mb-8 gap-4">
+      
+      <div class="order-2 md:order-1 text-center md:text-left">
+        <a href="{{ url_for('routes.landing') }}" 
+           class="link-back inline-flex items-center gap-2 font-medium">
+          <i class="bi bi-arrow-left"></i><span>Back to Dashboard</span>
+        </a>
+      </div>
+      
+      <div class="order-1 md:order-2 text-center">
+        <h1 class="text-2xl font-bold">JSON Formatter Tools</h1>
+      </div>
+      
+      <div class="order-3 md:order-3 text-center md:text-right">
+         <button id="btnTheme" class="btn-theme px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition">🌞 Light</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <a href="{{ url_for('routes.json_beautify') }}"
+         class="nav-card group block p-6 rounded-2xl shadow hover:shadow-xl hover:-translate-y-1">
+        <div class="flex flex-col items-center text-center h-full">
+          <div class="w-12 h-12 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center mb-4
+                      group-hover:bg-sky-600 group-hover:text-white transition-colors">
+            <i class="bi bi-braces text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-semibold">JSON Beautifier</h3>
+          <p class="text-sm mt-1">Format, minify, and validate JSON for better readability.</p>
+        </div>
+      </a>
+
+      <a href="{{ url_for('routes.json_to_go') }}"
+         class="nav-card group block p-6 rounded-2xl shadow hover:shadow-xl hover:-translate-y-1">
+        <div class="flex flex-col items-center text-center h-full">
+          <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mb-4
+                      group-hover:bg-amber-600 group-hover:text-white transition-colors">
+            <i class="bi bi-code-slash text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-semibold">JSON → Go Struct</h3>
+          <p class="text-sm mt-1">Automatically convert JSON into Go struct models.</p>
+        </div>
+      </a>
+      
+      <a href="{{ url_for('routes.json_to_cs') }}"
+         class="nav-card group block p-6 rounded-2xl shadow hover:shadow-xl hover:-translate-y-1">
+        <div class="flex flex-col items-center text-center h-full">
+          <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4
+                      group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+            <i class="bi bi-filetype-cs text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-semibold">JSON → C# Model</h3>
+          <p class="text-sm mt-1">Generate C# classes with <code>[JsonPropertyName]</code> attributes.</p>
+        </div>
+      </a>
+
+      <a href="{{ url_for('routes.json_to_yaml') }}"
+         class="nav-card group block p-6 rounded-2xl shadow hover:shadow-xl hover:-translate-y-1">
+        <div class="flex flex-col items-center text-center h-full">
+          <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-4
+                      group-hover:bg-rose-600 group-hover:text-white transition-colors">
+            <i class="bi bi-arrow-left-right text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-semibold">JSON ↔ YAML</h3>
+          <p class="text-sm mt-1">Convert JSON data to YAML format and vice versa.</p>
+        </div>
+      </a>
+
+      <a href="{{ url_for('routes.json_to_sql') }}"
+         class="nav-card group block p-6 rounded-2xl shadow hover:shadow-xl hover:-translate-y-1">
+        <div class="flex flex-col items-center text-center h-full">
+          <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4
+                      group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+            <i class="bi bi-database text-2xl"></i>
+          </div>
+          <h3 class="text-lg font-semibold">JSON → SQL DDL</h3>
+          <p class="text-sm mt-1">Generate <code>CREATE TABLE</code> and <code>INSERT</code> statements from JSON.</p>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+</body>
+</html>

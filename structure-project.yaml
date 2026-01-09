@@ -1,0 +1,95 @@
+bridgtl-dops-interactive-sonar-scanner/
+├── .github/
+│   └── workflows/
+│       └── github-action-cicd.yaml
+│
+├── app/
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   ├── constants.py
+│   │   ├── git_sonar.py
+│   │   ├── github_access.py
+│   │   ├── github_api.py
+│   │   ├── github_role_checker.py
+│   │   ├── linter_service.py
+│   │   ├── screenshot_service.py
+│   │   └── validators.py
+│   ├── __init__.py
+│   ├── config.py
+│   ├── routes.py
+│   ├── tasks.py
+│   └── worker.py
+│
+├── deploy/
+│   └── helm/
+│       ├── templates/
+│       │   ├── tests/test-connection.yaml
+│       │   ├── _helpers.tpl
+│       │   ├── deployment.yaml
+│       │   ├── hpa.yaml
+│       │   ├── ingress.yaml
+│       │   ├── NOTES.txt
+│       │   ├── pvc.yaml
+│       │   ├── service.yaml
+│       │   └── serviceaccount.yaml
+│       ├── .helmignore
+│       ├── Chart.yaml
+│       └── values.dev.yaml
+│
+├── static/
+│   ├── css/
+│   │   ├── codemirror/
+│   │   │   ├── codemirror.min.css
+│   │   │   └── material.min.css
+│   │   ├── bootstrap-icons.min.css
+│   │   ├── bootstrap.min.css
+│   │   ├── github-access-check.css
+│   │   ├── github-access-result.css
+│   │   ├── github-access.css
+│   │   └── hidden.css
+│   ├── fonts/
+│   │   ├── bootstrap-icons.woff
+│   │   └── bootstrap-icons.woff2
+│   ├── images/
+│   │   ├── favicon.png
+│   │   ├── github-icon.png
+│   │   └── logo.png
+│   └── js/
+│       ├── codemirror/
+│       │   ├── codemirror.min.js
+│       │   └── yaml.min.js
+│       ├── cron-parser/parser.min.js
+│       ├── axios.min.js
+│       ├── bootstrap.bundle.min.js
+│       └── tailwind-latest.js
+│
+├── templates/
+│   ├── base64-converter/base64-converter.html
+│   ├── crontab/crontab-generator.html
+│   ├── diff-checker/diff-checker.html
+│   ├── github-access/
+│   │   ├── github-access-check.html
+│   │   ├── github-access-edit-per-repo.html
+│   │   ├── github-access-login.html
+│   │   ├── github-access-result.html
+│   │   └── github-access.html
+│   ├── landing/landing.html
+│   ├── repo-scan/repo-scan.html
+│   ├── tools/
+│   │   ├── chmod-calculator.html
+│   │   ├── ip-calculator.html
+│   │   ├── time-converter.html
+│   │   └── yaml-linter.html
+│   └── layout.html
+│
+├── .dockerignore
+├── .env
+├── .env-example
+├── .gitignore
+├── Dockerfile
+├── LICENSE
+├── README.md
+├── requirements.txt
+├── run.py
+└── sonar-project.properties

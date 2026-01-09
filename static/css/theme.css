@@ -1,0 +1,20 @@
+/* theme.css */
+:root {
+  --bg:#eff2f6; --panel:#f8fafc; --text:#0f172a; --muted:#64748b; --border:#dbe2ea;
+  --ln-bg:#e7ecf3; --ln-fg:#64748b; --ok:#10b981; --warn:#f59e0b; --err:#ef4444;
+  --btn:#ffffff; --btn-text:#0f172a; --btn-hover:#f8fafc; --btn-border:#e5e7eb;
+  --btn-primary:#0ea5e9; --btn-ok:#10b981; --btn-warn:#f59e0b; --btn-err:#ef4444;
+}
+
+/* Ubah selector ini dari body ke :root atau html agar lebih fleksibel */
+[data-theme="dark"] {
+  --bg:#0b1220; --panel:#111a2b; --text:#e6edf3; --muted:#93a1b6; --border:#1f2a44;
+  --ln-bg:#0c1320; --ln-fg:#5b6b8b;
+  --btn:#111a2b; --btn-text:#e6edf3; --btn-hover:#1a243a; --btn-border:#1f2a44;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  transition: background .3s, color .3s; /* Transisi halus */
+}

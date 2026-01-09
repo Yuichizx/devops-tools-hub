@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Dockerfile Generator</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <style>
+    body { background-color: var(--bg); color: var(--text); transition: .3s; }
+    .main-card { background-color: var(--panel); border: 1px solid var(--border); color: var(--text); }
+    input, select, textarea { 
+        background-color: var(--bg) !important; 
+        border: 1px solid var(--border) !important; 
+        color: var(--text) !important; 
+    }
+    input:focus, select:focus, textarea:focus { 
+        border-color: var(--btn-primary) !important; 
+        outline: none; 
+        box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2); 
+    }
+    .btn-tool { background-color: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .btn-tool:hover { background-color: var(--btn-hover); color: var(--text); }
+    #toast { transition: transform .3s, opacity .3s; z-index: 99; }
+    
+    .code-output {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        font-family: 'Courier New', Courier, monospace;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 font-sans">
+  
+  <div class="container mx-auto max-w-7xl">
+    <header class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-2">
+            <i class="bi bi-box-seam text-blue-500"></i> Dockerfile Generator
+        </h1>
+        <p class="mt-1 opacity-70">Buat Dockerfile yang dioptimalkan dalam hitungan detik.</p>
+      </div>
+            <div class="flex gap-2">
+                <button id="btnTheme" class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm">🌞 Light</button>
+                <a href="{{ url_for('routes.landing') }}"
+                   class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      
+      <!-- Input Form -->
+      <div class="main-card rounded-xl shadow-lg p-6 flex flex-col gap-5">
+        
+        <div>
+            <label class="block font-bold mb-2">Bahasa Pemrograman / Framework</label>
+            <select id="appType" class="w-full p-3 rounded-lg">
+                <option value="python">Python (Standard)</option>
+                <option value="python-slim">Python (Slim / Optimized)</option>
+                <option value="node">Node.js</option>
+                <option value="golang">Go (Golang)</option>
+                <option value="java">Java (Spring Boot / Jar)</option>
+                <option value="static">Static Site (Nginx)</option>
+            </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block font-bold mb-2">Versi Runtime</label>
+                <div class="flex flex-col gap-2">
+                    <select id="runtimeVersionSelect" class="w-full p-3 rounded-lg bg-gray-50 border border-gray-300 text-gray-900 text-sm focus:ring-blue-500 focus:border-blue-500 block dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"></select>
+                    <input type="text" id="runtimeVersionCustom" placeholder="e.g. 3.12-rc" class="w-full p-3 rounded-lg hidden bg-gray-50 border border-gray-300 text-gray-900 text-sm focus:ring-blue-500 focus:border-blue-500 block dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                </div>
+            </div>
+            <div>
+                <label class="block font-bold mb-2">Port Aplikasi</label>
+                <input type="number" id="appPort" placeholder="e.g. 8000" class="w-full p-3 rounded-lg">
+            </div>
+        </div>
+
+        <div>
+            <label class="block font-bold mb-2">Working Directory</label>
+            <input type="text" id="workDir" value="/app" class="w-full p-3 rounded-lg">
+        </div>
+
+        <div>
+            <label class="block font-bold mb-2">Command untuk Menjalankan App</label>
+            <input type="text" id="runCmd" placeholder="e.g. python main.py" class="w-full p-3 rounded-lg">
+        </div>
+
+        <div class="flex items-center gap-2">
+            <input type="checkbox" id="useMultiStage" checked class="w-5 h-5">
+            <label for="useMultiStage" class="font-bold cursor-pointer">Gunakan Multi-stage Build (Lebih Ringan)</label>
+        </div>
+
+        <button id="btnGenerate" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition transform active:scale-95 shadow-md">
+            Generate Dockerfile
+        </button>
+
+      </div>
+
+      <!-- Output Code -->
+      <div class="main-card rounded-xl shadow-lg p-6 flex flex-col">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-xl">Preview Dockerfile</h3>
+            <div class="flex gap-2">
+                <button id="btnCopy" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2"><i class="bi bi-copy"></i> Salin</button>
+                <button id="btnDownload" class="btn-tool px-3 py-1 rounded text-sm flex items-center gap-2"><i class="bi bi-download"></i> Unduh</button>
+            </div>
+        </div>
+        <textarea id="dockerfileOutput" readonly class="w-full flex-1 p-4 rounded-lg font-mono text-sm code-output min-h-[500px]" spellcheck="false"></textarea>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0">
+    <p id="toast-message">Pesan notifikasi.</p>
+  </div>
+
+  <script>
+    const toast = document.getElementById('toast'), toastMsg = document.getElementById('toast-message'); 
+    let t;
+    function showToast(m, type='success'){ 
+        clearTimeout(t); 
+        toastMsg.textContent=m; 
+        toast.className = 'fixed bottom-5 right-5 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-0 opacity-100 ' + (type==='error'?'bg-red-600':'bg-slate-800'); 
+        t = setTimeout(() => toast.className = 'fixed bottom-5 right-5 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0', 3000); 
+    }
+
+    const elements = {
+        appType: document.getElementById('appType'),
+        versionSelect: document.getElementById('runtimeVersionSelect'),
+        versionCustom: document.getElementById('runtimeVersionCustom'),
+        port: document.getElementById('appPort'),
+        workDir: document.getElementById('workDir'),
+        runCmd: document.getElementById('runCmd'),
+        multiStage: document.getElementById('useMultiStage'),
+        output: document.getElementById('dockerfileOutput')
+    };
+
+    const defaults = {
+        python: { 
+            versions: [
+                '3.13.1', '3.13', 
+                '3.12.8', '3.12', 
+                '3.11.11', '3.11', 
+                'latest', 'custom'
+            ],
+            p: '8000', 
+            cmd: 'python app.py' 
+        },
+        'python-slim': { 
+            versions: [
+                '3.13.1-slim', '3.13-slim', 
+                '3.12.8-slim', '3.12-slim', 
+                '3.11.11-slim', '3.11-slim', 
+                'latest', 'custom'
+            ],
+            p: '8000', 
+            cmd: 'python app.py' 
+        },
+        node: { 
+            versions: [
+                '25.2.1-alpine', 
+                '24.12.0-alpine', 
+                '22.21.1-alpine', 
+                '20.19.6-alpine',
+                'latest', 'custom'
+            ],
+            p: '3000', 
+            cmd: 'node index.js' 
+        },
+
+        golang: { 
+            versions: [
+                // 1.26 Release Candidate
+                '1.26rc1-alpine', '1.26rc1-alpine3.23',
+                
+                // 1.25 Series (Latest Stable)
+                '1.25.5-alpine', '1.25.5-alpine3.23', '1.25-alpine3.23',
+
+                // 1.24 Series (Previous Stable)
+                '1.24.11-alpine', '1.24-alpine3.23',
+
+                'latest', 'custom'
+            ],
+            p: '8080', 
+            cmd: './main' 
+        },
+        java: { 
+            versions: [
+                '21.0.5_11-jdk-alpine', '21-jdk-alpine', 
+                '17.0.13_11-jdk-alpine', '17-jdk-alpine', 
+                'latest', 'custom'
+            ],
+            p: '8080', 
+            cmd: 'java -jar app.jar' 
+        },
+        static: { 
+            versions: [
+                '1.27.3-alpine', '1.27-alpine', 
+                '1.26.2-alpine', '1.26-alpine', 
+                'alpine', 'latest', 'custom'
+            ],
+            p: '80', 
+            cmd: '' 
+        }
+    };
+
+    function updateDefaults() {
+        const d = defaults[elements.appType.value];
+        
+        // Populate Select
+        elements.versionSelect.innerHTML = '';
+        d.versions.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v === 'custom' ? 'Custom...' : v;
+            elements.versionSelect.appendChild(opt);
+        });
+
+        // Reset Custom Field
+        elements.versionCustom.classList.add('hidden');
+        elements.versionCustom.value = '';
+
+        elements.port.value = d.p;
+        elements.runCmd.value = d.cmd;
+    }
+
+    elements.versionSelect.onchange = () => {
+        if (elements.versionSelect.value === 'custom') {
+            elements.versionCustom.classList.remove('hidden');
+            elements.versionCustom.focus();
+        } else {
+            elements.versionCustom.classList.add('hidden');
+        }
+    };
+
+    elements.appType.onchange = updateDefaults;
+    updateDefaults();
+
+    function generate() {
+        const type = elements.appType.value;
+        let v = elements.versionSelect.value;
+        if (v === 'custom') {
+            v = elements.versionCustom.value.trim() || 'latest';
+        }
+        
+        const p = elements.port.value || '80';
+        const wd = elements.workDir.value || '/app';
+        const cmd = elements.runCmd.value || 'echo Hello';
+        const multi = elements.multiStage.checked;
+
+        let df = "";
+
+        if (type.startsWith('python')) {
+            df = `FROM python:${v}\n\n`;
+            df += `ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1\n\n`;
+            df += `WORKDIR ${wd}\n\n`;
+            df += `RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*\n\n`;
+            df += `COPY requirements.txt .\n`;
+            df += `RUN pip install --no-cache-dir -r requirements.txt\n\n`;
+            df += `COPY . .\n\n`;
+            df += `EXPOSE ${p}\n\n`;
+            const cmdParts = cmd.split(' ');
+            df += `CMD [${cmdParts.map(c => `"${c}"`).join(', ')}]`;
+        } 
+        else if (type === 'node') {
+            if (multi) {
+                df = `# Build Stage\nFROM node:${v} AS builder\nWORKDIR ${wd}\nCOPY package*.json .\/\nRUN npm install\nCOPY . .\nRUN npm run build --if-present\n\n`;
+                df += `# Production Stage\nFROM node:${v.includes('alpine') ? 'alpine' : 'slim'}\nWORKDIR ${wd}\nCOPY --from=builder ${wd} .\nEXPOSE ${p}\n`;
+                const cmdParts = cmd.split(' ');
+                df += `CMD [${cmdParts.map(c => `"${c}"`).join(', ')}]`;
+            } else {
+                df = `FROM node:${v}\nWORKDIR ${wd}\nCOPY package*.json .\/\nRUN npm install --production\nCOPY . .\nEXPOSE ${p}\n`;
+                const cmdParts = cmd.split(' ');
+                df += `CMD [${cmdParts.map(c => `"${c}"`).join(', ')}]`;
+            }
+        }
+        else if (type === 'golang') {
+            df = `# Build Stage\nFROM golang:${v} AS builder\nWORKDIR ${wd}\nCOPY . .\nRUN go mod download && go build -o main .\n\n`;
+            df += `# Final Stage\nFROM alpine:latest\nWORKDIR /root/\nCOPY --from=builder ${wd}/main .\nEXPOSE ${p}\nCMD ["./main"]`;
+        }
+        else if (type === 'java') {
+            // Check if user selected a custom version that might include the image name, 
+            // otherwise default to eclipse-temurin which is the successor to official openjdk image
+            let imageName = 'eclipse-temurin';
+            if (v.includes('openjdk')) imageName = 'openjdk'; // Fallback if they explicitly type it in custom
+            
+            df = `FROM ${imageName}:${v}\nWORKDIR ${wd}\nCOPY target/*.jar app.jar\nEXPOSE ${p}\nENTRYPOINT ["java", "-jar", "app.jar"]`;
+        }
+        else if (type === 'static') {
+            df = `FROM nginx:${v}\nCOPY . /usr/share/nginx/html\nEXPOSE 80\nCMD ["nginx", "-g", "daemon off;"]`;
+        }
+
+        elements.output.value = df;
+        showToast('Dockerfile berhasil dibuat!');
+    }
+
+    document.getElementById('btnGenerate').onclick = generate;
+    document.getElementById('btnCopy').onclick = () => {
+        if(!elements.output.value) return;
+        navigator.clipboard.writeText(elements.output.value).then(() => showToast('Disalin!'));
+    };
+    document.getElementById('btnDownload').onclick = () => {
+        if(!elements.output.value) return;
+        const blob = new Blob([elements.output.value], {type: 'text/plain'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Dockerfile';
+        a.click();
+    };
+  </script>
+</body>
+</html>

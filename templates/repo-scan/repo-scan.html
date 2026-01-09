@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Repository Scanner</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  
+  <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet" />
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/scanner.css') }}">
+  
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</head>
+<body>
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="{{ url_for('routes.landing') }}">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" style="height: 30px; margin-right: 8px;">
+        Repo Scanner
+      </a>
+      
+      <button id="btnTheme" class="btn btn-sm btn-outline-light ms-auto">🌞 Light</button>
+    </div>
+  </nav>
+
+  <div class="container my-4 my-md-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h2">Scan GitHub Repository</h1>
+      <a href="{{ url_for('routes.landing') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Landing Page
+      </a>
+    </div>
+
+    <div class="card form-card mb-4">
+      <div class="card-body p-4">
+        <form method="POST" id="scanForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="repo_url" class="form-label">Repository URL</label>
+              <input type="url" class="form-control" id="repo_url" name="repo_url" required placeholder="https://github.com/user/repo.git">
+            </div>
+            <div class="col-md-6">
+              <label for="branch_name" class="form-label">Branch Name</label>
+              <input type="text" class="form-control" id="branch_name" name="branch_name" required placeholder="main">
+            </div>
+            <div class="col-12">
+              <label for="project_key" class="form-label">SonarQube Project Key</label>
+              <input type="text" class="form-control" id="project_key" name="project_key" required placeholder="your_project_key">
+            </div>
+            <div class="col-12">
+              <label for="sonar_exclusions" class="form-label d-flex align-items-center">
+                Sonar Exclusions (Optional)
+                <i class="bi bi-info-circle ms-2" data-bs-toggle="popover" data-bs-trigger="hover focus" title="Exclusion Format" data-bs-content="Separate patterns with commas. Example: **/mocks/**,**/vendor/**"></i>
+              </label>
+              <input type="text" class="form-control" id="sonar_exclusions" name="sonar_exclusions" placeholder="Enter patterns to exclude files">
+            </div>
+            <div class="col-12">
+              <label for="sonar_inclusions" class="form-label d-flex align-items-center">
+                Sonar Inclusions (Optional)
+                <i class="bi bi-info-circle ms-2" data-bs-toggle="popover" data-bs-trigger="hover focus" title="Inclusion Format" data-bs-content="Only files matching these patterns will be analyzed. Example: src/**/*.go,src/**/*.js"></i>
+              </label>
+              <input type="text" class="form-control" id="sonar_inclusions" name="sonar_inclusions" placeholder="Enter patterns to include files (optional)">
+            </div>
+          </div>
+          <div class="mt-4">
+            <button type="submit" class="btn btn-primary px-4 py-2" id="submitBtn">
+              <i class="bi bi-play-circle me-2"></i>Start Scanning
+              <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true" id="submitSpinner"></span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
+      <h2 class="h4 mb-0">Scan History</h2>
+      <button id="clearListBtn" class="btn btn-sm btn-outline-danger">
+        <i class="bi bi-trash me-1"></i> Clear History
+      </button>
+    </div>
+
+    <div id="tasksContainer"></div>
+
+  </div>
+
+  <div class="modal fade" id="logModal" tabindex="-1" aria-labelledby="logModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="logModalLabel">Execution Log</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="log-content" id="logModalContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/axios.min.js') }}"></script>
+
+  <script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
+
+</body>
+</html>

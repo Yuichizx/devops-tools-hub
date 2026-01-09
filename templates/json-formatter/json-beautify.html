@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JSON Beautifier — Light/Dark Mode</title>
+  <meta name="description" content="Beautify, minify, validate, sort keys, copy/download, drag&drop JSON with line numbers and dark/light mode.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <style>
+    *{box-sizing:border-box;transition:background .3s,color .3s,border .3s}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+    header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+    header h1{margin:0;font-size:20px}
+    header p{margin:6px 0 0;color:var(--muted);font-size:13px}
+
+    .wrap{max-width:1200px;margin:18px auto;padding:0 16px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px;justify-content:space-between}
+    .toolbar-left,.toolbar-right{display:flex;gap:10px;align-items:center}
+    .toolbar .group{display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--border);padding:8px 10px;border-radius:12px}
+    select, input[type="number"], input[type="checkbox"]{background:var(--panel);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:6px}
+    label{font-size:13px;color:var(--muted)}
+
+    .btn{border:1px solid var(--btn-border);background:var(--btn);color:var(--btn-text);padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+    .btn:hover{background:var(--btn-hover)}
+    .btn.primary{background:var(--btn-primary);color:#fff;border-color:#0284c7}
+    .btn.ok{background:var(--btn-ok);color:#fff}
+    .btn.warn{background:var(--btn-warn);color:#fff}
+    .btn.err{background:var(--btn-err);color:#fff}
+    .btn.toggle{padding:8px 10px;font-size:14px;border-radius:8px}
+
+    .back-btn{border:1px solid var(--btn-border);background:var(--panel);color:var(--text);padding:10px 12px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+    .back-btn:hover{background:var(--btn-hover)}
+
+    .panes{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media (max-width:1024px){.panes{grid-template-columns:1fr}}
+
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:380px}
+    .panel .head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--btn-hover)}
+    .panel .head h3{margin:0;font-size:14px;color:var(--muted)}
+    .panel .body{flex:1;display:flex;min-height:340px}
+    .editor{display:flex;width:100%;min-height:340px}
+    .lnPane{width:56px;background:var(--ln-bg);border-right:1px solid var(--border);overflow:auto}
+    .ln{color:var(--ln-fg);text-align:right;padding:12px 10px;margin:0;white-space:pre;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:1.5}
+    .codewrap{flex:1;display:flex}
+    textarea,pre{flex:1;background:transparent;color:var(--text);border:0;outline:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:1.5;padding:12px 14px;margin:0;white-space:pre;overflow:auto}
+    textarea{resize:none}
+    .hidden{display:none}
+    .status{margin-top:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--btn-hover);color:var(--muted);font-size:13px}
+    .status.ok{color:var(--ok)}.status.err{color:var(--err)}
+    .tag{padding:6px 10px;border-radius:999px;border:1px solid var(--border);color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>JSON Beautifier</h1>
+      <p>Line numbers appear when content exists. Stable layout, sync scroll, drag&drop, validation, sort keys, beautify/minify.</p>
+    </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">JSON Beautifier & Minifier</h1>
+        <button id="btnBack" type="button" class="back-btn" title="Back">
+            <i class="bi bi-arrow-left"></i>
+            <span>Back</span>
+        </button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="group">
+          <label for="indent">Indent:</label>
+          <input id="indent" type="number" min="0" max="12" value="2" />
+          <label><input type="checkbox" id="sortKeys"/> Sort Keys</label>
+          <label><input type="checkbox" id="endline" checked/> End with newline (\n)</label>
+        </div>
+        <div class="group">
+          <button class="btn primary" id="btnBeautify">Beautify</button>
+          <button class="btn warn" id="btnMinify">Minify</button>
+          <button class="btn ok" id="btnValidate">Validate</button>
+        </div>
+      </div>
+      <div class="toolbar-right">
+        <button class="btn toggle" id="btnTheme">🌞 Light</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="group">
+        <button class="btn" id="btnCopy">Copy Output</button>
+        <button class="btn" id="btnDownload">Download .json</button>
+        <button class="btn err" id="btnClear">Clear</button>
+      </div>
+    </div>
+
+    <div class="panes">
+      <section class="panel">
+        <div class="head"><h3>Input</h3><small id="inSize" class="tag">0 B</small></div>
+        <div class="body">
+          <div class="editor" id="inEditor">
+            <div id="inLnPane" class="lnPane hidden"><pre class="ln" id="inLn"></pre></div>
+            <div class="codewrap"><textarea id="input" placeholder="Paste JSON here or drop .json file..."></textarea></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="head"><h3>Output</h3><small id="outSize" class="tag">0 B</small></div>
+        <div class="body">
+          <div class="editor" id="outEditor">
+            <div id="outLnPane" class="lnPane hidden"><pre class="ln" id="outLn"></pre></div>
+            <div class="codewrap"><pre id="output" aria-live="polite"></pre></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="status" class="status">Ready. Ctrl/Cmd + Enter → Beautify</div>
+  </div>
+
+  <script>
+    // --- Back button ---
+    function smartBack(fallbackUrl) {
+      try {
+        const ref = document.referrer;
+        if (ref && new URL(ref).origin === location.origin && history.length > 1) { history.back(); return; }
+      } catch (_) {}
+      // Routes (Flask): routes.landing
+      try { window.location.href = "{{ url_for('routes.landing') }}"; }
+      catch { window.location.href = '/'; }
+    }
+    document.getElementById('btnBack').onclick = () => smartBack("/");
+
+    // --- DOM + logic ---
+    const $ = s => document.querySelector(s),
+          input = $("#input"),
+          output = $("#output"),
+          indentEl = $("#indent"),
+          sortKeysEl = $("#sortKeys"),
+          endlineEl = $("#endline"),
+          statusEl = $("#status"),
+          inSize = $("#inSize"),
+          outSize = $("#outSize"),
+          inLn = $("#inLn"),
+          outLn = $("#outLn"),
+          inLnPane = $("#inLnPane"),
+          outLnPane = $("#outLnPane");
+
+    const units = ['B','KB','MB','GB'];
+    const bytes = n => !n ? '0 B' : (n / Math.pow(1024, Math.floor(Math.log(n) / Math.log(1024)))).toFixed(1) + ' ' + units[Math.floor(Math.log(n) / Math.log(1024))];
+    const updateSizes = () => { inSize.textContent = bytes(new Blob([input.value || '']).size); outSize.textContent = bytes(new Blob([output.textContent || '']).size); }
+    const setStatus = (m, t) => { statusEl.className = 'status' + (t ? ' ' + t : ''); statusEl.textContent = m; }
+
+    // ✅ use real newline, not string literal "\n"
+    const ensureEndline = t => endlineEl.checked ? (t.endsWith('\n') ? t : t + '\n') : t;
+
+    // Simple parser: remove trailing comma & // comments
+    const parseJSON = r => {
+      try {
+        const cleaned = r
+          .replace(/,\s*([}\]])/g, '$1') // remove trailing comma
+          .replace(/(^|[^:])\/\/.*$/gm, '$1'); // remove // comments
+        return { ok: true, data: JSON.parse(cleaned) };
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    };
+
+    const sortKeysRec = o =>
+      Array.isArray(o) ? o.map(sortKeysRec)
+      : (o && typeof o === 'object')
+        ? Object.keys(o).sort().reduce((a,k)=>(a[k]=sortKeysRec(o[k]),a),{})
+        : o;
+
+    const renderOutput = t => {
+      output.textContent = t;
+      toggleLn(outLnPane, t.length > 0);
+      updateLn(outLn, t);
+      updateSizes();
+    };
+
+    const beautify = () => {
+      const raw = input.value.trim();
+      if (!raw) return setStatus('Enter JSON first.','warn');
+      const p = parseJSON(raw);
+      if (!p.ok) return setStatus('Invalid JSON: ' + p.error, 'err');
+      const indent = Math.min(Math.max(+indentEl.value || 2, 0), 12);
+      const d = sortKeysEl.checked ? sortKeysRec(p.data) : p.data;
+      renderOutput(ensureEndline(JSON.stringify(d, null, indent)));
+      setStatus('Formatted successfully.','ok');
+    };
+
+    const minify = () => {
+      const raw = input.value.trim();
+      if (!raw) return setStatus('Enter JSON first.','warn');
+      const p = parseJSON(raw);
+      if (!p.ok) return setStatus('Invalid JSON: ' + p.error, 'err');
+      renderOutput(ensureEndline(JSON.stringify(sortKeysEl.checked ? sortKeysRec(p.data) : p.data)));
+      setStatus('Minified successfully.','ok');
+    };
+
+    const validate = () => {
+      const raw = input.value.trim();
+      if (!raw) return setStatus('Enter JSON first.','warn');
+      const p = parseJSON(raw);
+      setStatus(p.ok ? 'Valid JSON. ✔' : 'Invalid JSON: ' + p.error, p.ok ? 'ok' : 'err');
+    };
+
+    // ✅ split by real newline for line numbers
+    const updateLn = (el, t) => {
+      const lines = (t || '').split('\n').length;
+      el.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+    };
+
+    const toggleLn = (p, show) => p.classList.toggle('hidden', !show);
+
+    const bindSyncScroll = (s, l) => {
+      let lock = false;
+      s.addEventListener('scroll', () => { if (lock) return; lock = true; l.scrollTop = s.scrollTop; lock = false; });
+      l.addEventListener('scroll', () => { if (lock) return; lock = true; s.scrollTop = l.scrollTop; lock = false; });
+    };
+    bindSyncScroll(input, inLnPane);
+    bindSyncScroll(output, outLnPane);
+
+    input.addEventListener('input', () => {
+      const v = input.value;
+      toggleLn(inLnPane, v.length > 0);
+      updateLn(inLn, v);
+      updateSizes();
+    });
+
+    // Action buttons
+    document.getElementById('btnBeautify').onclick = beautify;
+    document.getElementById('btnMinify').onclick = minify;
+    document.getElementById('btnValidate').onclick = validate;
+
+    document.getElementById('btnCopy').onclick = async () => {
+      if (!output.textContent) return setStatus('No output to copy.','warn');
+      try { await navigator.clipboard.writeText(output.textContent); setStatus('Output copied.','ok'); } 
+      catch { setStatus('Failed to copy.','err'); }
+    };
+
+    document.getElementById('btnDownload').onclick = () => {
+      const t = output.textContent || input.value || '';
+      if (!t) return setStatus('No content to download.','warn');
+      const blob = new Blob([t], { type:'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'data.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setStatus('Downloaded successfully.','ok');
+    };
+
+    document.getElementById('btnClear').onclick = () => {
+      output.textContent = '';
+      toggleLn(outLnPane, false);
+      outLn.textContent = '';
+      setStatus('Output cleared.','warn');
+      updateSizes();
+    };
+
+    // Drag & drop for input
+    const inEditor = document.getElementById('inEditor');
+    ['dragenter','dragover'].forEach(e =>
+      inEditor.addEventListener(e, ev => { ev.preventDefault(); ev.dataTransfer.dropEffect = 'copy'; })
+    );
+    inEditor.addEventListener('drop', e => {
+      e.preventDefault();
+      const dt = e.dataTransfer;
+      const f = dt && dt.files && dt.files[0];
+      if (!f) return;
+      if (!(/\.json$|application\/json/.test(f.name + f.type)))
+        return setStatus('Only .json files are supported.','warn');
+      const r = new FileReader();
+      r.onload = () => { input.value = r.result || ''; input.dispatchEvent(new Event('input')); setStatus('File loaded. Click Beautify/Minify.','ok'); };
+      r.onerror = () => setStatus('Failed to read file.','err');
+      r.readAsText(f);
+    });
+
+    // Init
+    input.value = '';
+    toggleLn(inLnPane, false);
+    toggleLn(outLnPane, false);
+    updateSizes();
+
+    // Shortcut: Beautify
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); beautify(); }
+    });
+  </script>
+</body>
+</html>

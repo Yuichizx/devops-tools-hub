@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base64 Converter</title>
+    
+    <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+    <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+    <style>
+        /* Mapping Variabel Theme ke Elemen */
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .converter-card {
+            background-color: var(--panel);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        /* Styling Textarea agar responsif terhadap tema */
+        textarea {
+            background-color: var(--bg) !important; /* Pakai warna background halaman */
+            color: var(--text) !important;
+            border-color: var(--border) !important;
+        }
+        
+        /* Tombol Utility (Copy/Paste/Clear) */
+        .util-btn {
+            color: var(--muted);
+            transition: color 0.2s;
+        }
+        .util-btn:hover { color: var(--btn-primary); }
+        .util-btn.danger:hover { color: var(--err); }
+
+        /* Tombol Kembali */
+        .btn-back {
+            background-color: var(--panel);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-back:hover {
+            background-color: var(--btn-hover);
+        }
+
+        /* Toast Animation */
+        #toast {
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 font-sans">
+
+    <div class="container mx-auto max-w-4xl">
+        
+        <header class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+            <div class="text-center md:text-left">
+                <h1 class="text-3xl md:text-4xl font-bold">Base64 Converter</h1>
+                <p class="mt-1 opacity-75">Encode dan decode teks ke format Base64.</p>
+            </div>
+            
+            <div class="flex gap-3">
+                <button id="btnTheme" class="btn-back px-4 py-2 rounded-lg text-sm font-medium shadow-sm">🌞 Light</button>
+
+                <a href="{{ url_for('routes.landing') }}"
+                   class="btn-back inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors duration-200">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Kembali
+                </a>
+            </div>
+        </header>
+
+        <div class="converter-card rounded-xl shadow-lg p-6 md:p-8">
+            
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label for="inputText" class="font-bold opacity-90">Input Teks</label>
+                    <div class="flex gap-3">
+                        <button onclick="pasteFromClipboard()" title="Paste dari Clipboard" class="util-btn"><i class="bi bi-clipboard text-lg"></i></button>
+                        <button onclick="clearFields()" title="Bersihkan" class="util-btn danger"><i class="bi bi-x-lg text-lg"></i></button>
+                    </div>
+                </div>
+                <textarea id="inputText" placeholder="Masukkan teks atau Base64 di sini..." 
+                          class="w-full p-4 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-base min-h-[200px] resize-y"></textarea>
+            </div>
+
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 my-6">
+                <button onclick="encodeBase64()" 
+                        class="w-full md:w-auto flex-1 bg-blue-600 text-white px-6 py-3 text-base font-semibold rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="bi bi-lock-fill"></i> Encode
+                </button>
+                <button onclick="decodeBase64()" 
+                        class="w-full md:w-auto flex-1 bg-green-600 text-white px-6 py-3 text-base font-semibold rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="bi bi-unlock-fill"></i> Decode
+                </button>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label for="outputText" class="font-bold opacity-90">Hasil Output</label>
+                    <div class="flex gap-2">
+                        <button onclick="copyToClipboard()" title="Salin Hasil" class="util-btn"><i class="bi bi-copy text-lg"></i></button>
+                    </div>
+                </div>
+                <textarea id="outputText" readonly 
+                          class="w-full p-4 border rounded-lg focus:outline-none text-base min-h-[200px] resize-y"></textarea>
+            </div>
+            
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0">
+        <p id="toast-message">Pesan notifikasi.</p>
+    </div>
+
+    <script>
+        const inputText = document.getElementById("inputText");
+        const outputText = document.getElementById("outputText");
+        const toast = document.getElementById("toast");
+        const toastMessage = document.getElementById("toast-message");
+        let toastTimeout;
+
+        function showToast(message, type = 'success') {
+            clearTimeout(toastTimeout);
+            toastMessage.textContent = message;
+            
+            // Reset class dasar
+            toast.className = 'fixed bottom-5 right-5 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-0 opacity-100';
+            
+            // Warna toast tetap menggunakan Tailwind utility agar menonjol
+            if (type === 'error') {
+                toast.classList.add('bg-red-600');
+            } else {
+                toast.classList.add('bg-slate-800');
+            }
+
+            toastTimeout = setTimeout(() => {
+                toast.className = 'fixed bottom-5 right-5 text-white px-5 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0';
+            }, 3000);
+        }
+
+        function encodeBase64() {
+            if (!inputText.value) {
+                showToast("Input tidak boleh kosong", "error");
+                return;
+            }
+            try {
+                // Support Unicode characters
+                const encoded = btoa(unescape(encodeURIComponent(inputText.value)));
+                outputText.value = encoded;
+                if(encoded) showToast("Teks berhasil di-encode!");
+            } catch (e) {
+                showToast("Error: Karakter tidak valid untuk Base64", "error");
+                outputText.value = "";
+            }
+        }
+
+        function decodeBase64() {
+            if (!inputText.value) {
+                showToast("Input tidak boleh kosong", "error");
+                return;
+            }
+            try {
+                // Support Unicode characters
+                const decoded = decodeURIComponent(escape(atob(inputText.value)));
+                outputText.value = decoded;
+                if (decoded) showToast("Base64 berhasil di-decode!");
+            } catch (e) {
+                outputText.value = "";
+                showToast("Error: Input bukan Base64 yang valid", "error");
+            }
+        }
+
+        function copyToClipboard() {
+            if (!outputText.value) {
+                showToast("Tidak ada hasil untuk disalin", "error");
+                return;
+            }
+            navigator.clipboard.writeText(outputText.value).then(() => {
+                showToast("Hasil berhasil disalin ke clipboard!");
+            }).catch(() => {
+                showToast("Gagal menyalin ke clipboard", "error");
+            });
+        }
+
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    inputText.value = text;
+                    showToast("Teks berhasil ditempel!");
+                } else {
+                    showToast("Clipboard kosong", "error");
+                }
+            } catch (err) {
+                showToast("Gagal membaca dari clipboard", "error");
+                console.error('Failed to read clipboard contents: ', err);
+            }
+        }
+        
+        function clearFields() {
+            inputText.value = "";
+            outputText.value = "";
+            showToast("Semua field dibersihkan.");
+        }
+    </script>
+</body>
+</html>

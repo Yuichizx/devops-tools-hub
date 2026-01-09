@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title|default(config.APP_TITLE) }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="{{ config.APP_FAVICON }}">
+
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    {% block head %}{% endblock %}
+
+    <style>
+        /* --- CSS BRIDGE: Menghubungkan Bootstrap dengan Theme Variables --- */
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Navbar mengikuti warna Panel */
+        .navbar {
+            background-color: var(--panel) !important;
+            border-bottom: 1px solid var(--border);
+            transition: background-color 0.3s;
+        }
+        .navbar-brand, .nav-link {
+            color: var(--text) !important;
+        }
+
+        /* Card Bootstrap */
+        .card {
+            background-color: var(--panel);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        /* Form Input */
+        .form-control, .form-select {
+            background-color: var(--bg);
+            border-color: var(--border);
+            color: var(--text);
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: var(--bg);
+            color: var(--text);
+            border-color: var(--btn-primary);
+            box-shadow: 0 0 0 0.25rem rgba(14, 165, 233, 0.25);
+        }
+        .form-control::placeholder {
+            color: var(--muted);
+            opacity: 0.7;
+        }
+        
+        /* Input Readonly */
+        .form-control[readonly] {
+            background-color: var(--ln-bg);
+            opacity: 1;
+        }
+
+        /* Background Text/Pre (untuk cheat sheet, hasil log, dll) */
+        .bg-light {
+            background-color: var(--ln-bg) !important;
+            color: var(--text) !important;
+        }
+        
+        /* Text Muted Override */
+        .text-muted { color: var(--muted) !important; }
+
+        /* Tombol Toggle Theme di Navbar */
+        #btnTheme {
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        #btnTheme:hover {
+            background-color: var(--btn-hover);
+        }
+    </style>
+</head>
+<body class="{{ body_class|default('') }}">
+
+    <nav class="navbar navbar-expand navbar-light">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('routes.landing') }}">
+                <img src="{{ config.APP_LOGO }}"
+                     alt="Logo" height="30" class="me-2">
+                {{ config.APP_TITLE }}
+            </a>
+            
+            <div class="ms-auto">
+                <button id="btnTheme" class="btn btn-sm">dYOz Light</button>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+    
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/axios.min.js') }}"></script>
+
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>

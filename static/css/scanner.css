@@ -1,0 +1,50 @@
+/* static/css/scanner.css */
+
+body { 
+  background-color: var(--bg); /* Menggunakan variabel dari theme.css */
+  color: var(--text);
+  padding-top: 56px; 
+}
+
+/* Penyesuaian agar Card mengikuti tema */
+.form-card, .tasks-card { 
+  border: 1px solid var(--border); 
+  border-radius: 0.75rem; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  background-color: var(--panel);
+  color: var(--text);
+}
+
+.card-body {
+  background-color: var(--panel);
+  color: var(--text);
+  border-radius: 0.75rem;
+}
+
+/* Log content tetap gelap agar mirip terminal */
+.log-content { 
+  background-color: #212529; 
+  color: #f8f9fa; 
+  font-family: monospace; 
+  white-space: pre-wrap; 
+  max-height: 60vh; 
+  overflow-y: auto; 
+  border-radius: 0.25rem; 
+  padding: 1rem; 
+}
+
+/* Sticky banner */
+#net-banner { position: sticky; top: 56px; z-index: 1040; }
+
+/* Modal Theme Adjustments */
+.modal-content {
+  background-color: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.modal-header, .modal-footer {
+  border-color: var(--border);
+}
+.btn-close {
+  filter: var(--btn-close-filter, none); /* Nanti diatur di theme.css jika perlu invert warna icon close */
+}

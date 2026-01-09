@@ -1,0 +1,47 @@
+.github-access-page {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.github-access-page .card,
+.github-access-page .modal-content,
+.github-access-page .list-group-item {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.github-access-page .table,
+.github-access-page .table td,
+.github-access-page .table th {
+  color: var(--text);
+}
+
+.github-access-page .form-control,
+.github-access-page .form-select {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.github-access-page .form-control:focus,
+.github-access-page .form-select:focus {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--btn-primary);
+  box-shadow: 0 0 0 0.25rem rgba(14, 165, 233, 0.25);
+}
+
+.github-access-page .form-control::placeholder {
+  color: var(--muted);
+}
+
+.github-access-page .form-text,
+.github-access-page .text-muted {
+  color: var(--muted) !important;
+}
+
+.github-access-page .modal-header,
+.github-access-page .modal-footer {
+  border-color: var(--border);
+}

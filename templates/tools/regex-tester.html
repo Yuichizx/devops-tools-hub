@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Regex Tester & Cheatsheet</title>
+  
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+  <script src="{{ url_for('static', filename='js/tailwind-latest.js') }}" crossorigin="anonymous"></script>
+  <link href="{{ url_for('static', filename='css/bootstrap-icons.min.css') }}" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+
+  <style>
+    body { background-color: var(--bg); color: var(--text); transition: .3s; }
+    .main-card { background-color: var(--panel); border: 1px solid var(--border); color: var(--text); }
+    input, textarea { 
+        background-color: var(--bg) !important; 
+        border: 1px solid var(--border) !important; 
+        color: var(--text) !important; 
+    }
+    input:focus, textarea:focus { border-color: var(--btn-primary) !important; outline: none; }
+    .btn-tool { background-color: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    
+    .match-highlight {
+        background-color: rgba(14, 165, 233, 0.3);
+        border-bottom: 2px solid #0ea5e9;
+        border-radius: 2px;
+    }
+    
+    .regex-cheatsheet td { border-bottom: 1px solid var(--border); padding: 8px 4px; }
+    .regex-cheatsheet code { background: rgba(0,0,0,0.1); padding: 2px 4px; border-radius: 4px; }
+    [data-theme='dark'] .regex-cheatsheet code { background: rgba(255,255,255,0.1); }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 font-sans">
+  
+  <div class="container mx-auto max-w-7xl">
+    <header class="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold flex items-center gap-2">
+            <i class="bi bi-regex text-purple-500"></i> Regex Tester
+        </h1>
+        <p class="mt-1 opacity-70">Uji pola Regular Expression secara real-time.</p>
+      </div>
+            <div class="flex gap-2">
+                <button id="btnTheme" class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm">🌞 Light</button>
+                <a href="{{ url_for('routes.landing') }}"
+                   class="btn-action px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- Main Tester -->
+      <div class="lg:col-span-2 flex flex-col gap-6">
+        <div class="main-card rounded-xl shadow-lg p-6">
+            <label class="block font-bold mb-2">Pola Regex</label>
+            <div class="flex gap-2 items-center mb-4">
+                <span class="text-xl opacity-50">/</span>
+                <input type="text" id="regexInput" placeholder="[a-zA-Z0-0._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" class="flex-1 p-3 rounded-lg font-mono">
+                <span class="text-xl opacity-50">/</span>
+                <input type="text" id="flagsInput" value="g" placeholder="flags" class="w-16 p-3 rounded-lg font-mono text-center">
+            </div>
+
+            <label class="block font-bold mb-2">Teks Pengujian</label>
+            <div class="relative">
+                <div id="backdrop" class="absolute inset-0 p-4 font-mono text-sm pointer-events-none whitespace-pre-wrap break-all overflow-auto border border-transparent text-transparent"></div>
+                <textarea id="testString" placeholder="Ketik atau tempel teks pengujian di sini..." class="w-full p-4 border rounded-lg min-h-[300px] font-mono text-sm whitespace-pre-wrap break-all relative z-10 bg-transparent"></textarea>
+            </div>
+
+                <div class="flex items-center gap-2 text-sm opacity-70 mt-2">
+                    <i class="bi bi-info-circle"></i>
+                    <span id="matchStatus">Enter regex pattern to start.</span>
+                </div>
+            </div>
+
+            <!-- TEST STRING -->
+        </div>
+      </div>
+
+      <!-- Cheatsheet -->
+      <div class="main-card rounded-xl shadow-lg p-6 overflow-auto">
+        <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="bi bi-book"></i> Cheatsheet</h3>
+        <table class="w-full text-xs regex-cheatsheet">
+            <caption class="sr-only">Regex Cheatsheet Reference</caption>
+            <thead>
+                <tr>
+                    <th scope="col" class="text-left py-2 font-semibold">Pattern</th>
+                    <th scope="col" class="text-left py-2 font-semibold">Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><code>.</code></td><td>Karakter apa saja</td></tr>
+                <tr><td><code>\d</code></td><td>Angka (0-9)</td></tr>
+                <tr><td><code>\w</code></td><td>Alphanumeric & _</td></tr>
+                <tr><td><code>\s</code></td><td>Spasi / Tab / Newline</td></tr>
+                <tr><td><code>[abc]</code></td><td>Salah satu dari a, b, atau c</td></tr>
+                <tr><td><code>[^abc]</code></td><td>Bukan a, b, atau c</td></tr>
+                <tr><td><code>*</code></td><td>0 atau lebih</td></tr>
+                <tr><td><code>+</code></td><td>1 atau lebih</td></tr>
+                <tr><td><code>?</code></td><td>0 atau 1</td></tr>
+                <tr><td><code>{3}</code></td><td>Tepat 3 kali</td></tr>
+                <tr><td><code>^</code></td><td>Awal baris</td></tr>
+                <tr><td><code>$</code></td><td>Akhir baris</td></tr>
+                <tr><td><code>(a|b)</code></td><td>a atau b</td></tr>
+            </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const regexInput = document.getElementById('regexInput');
+    const flagsInput = document.getElementById('flagsInput');
+    const testString = document.getElementById('testString');
+    const backdrop = document.getElementById('backdrop');
+    const matchStatus = document.getElementById('matchStatus');
+
+    function updateMatches() {
+        const regexStr = regexInput.value;
+        const flagsStr = flagsInput.value;
+        const text = testString.value;
+
+        if (!regexStr) {
+            backdrop.innerHTML = text;
+            matchStatus.textContent = "Enter regex pattern to start.";
+            return;
+        }
+
+        try {
+            const regex = new RegExp(regexStr, flagsStr.includes('g') ? flagsStr : flagsStr + 'g');
+            let match;
+            let resultHtml = "";
+            let lastIndex = 0;
+            let matchCount = 0;
+
+            // Simple highlighting logic
+            while ((match = regex.exec(text)) !== null) {
+                if (match.index === regex.lastIndex) regex.lastIndex++; // Prevent infinite loop for zero-width matches
+                
+                resultHtml += text.substring(lastIndex, match.index);
+                resultHtml += `<span class="match-highlight">${match[0]}</span>`;
+                lastIndex = regex.lastIndex;
+                matchCount++;
+
+                if (!flagsStr.includes('g')) break;
+            }
+            resultHtml += text.substring(lastIndex);
+            
+            backdrop.innerHTML = resultHtml.replace(/\n/g, '<br>');
+            matchStatus.textContent = `Ditemukan ${matchCount} kecocokan.`;
+            matchStatus.className = "mt-4 p-3 rounded-lg bg-green-100 text-green-800 text-sm font-medium flex items-center gap-2";
+
+        } catch (e) {
+            backdrop.innerHTML = text;
+            matchStatus.textContent = "Regex Error: " + e.message;
+            matchStatus.className = "mt-4 p-3 rounded-lg bg-red-100 text-red-800 text-sm font-medium flex items-center gap-2";
+        }
+    }
+
+    // Sync scroll
+    testString.onscroll = () => {
+        backdrop.scrollTop = testString.scrollTop;
+    };
+
+    regexInput.oninput = updateMatches;
+    flagsInput.oninput = updateMatches;
+    testString.oninput = updateMatches;
+    
+    updateMatches();
+  </script>
+</body>
+</html>
