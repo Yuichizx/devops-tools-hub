@@ -39,7 +39,7 @@ TOOLS_DATA = [
     },
     {
         "title": "Base64 Converter",
-        "desc": "Encode dan decode teks ke format Base64.",
+        "desc": "Encode and decode text to Base64 format.",
         "icon": "bi-arrow-repeat",
         "color": "green",
         "url_endpoint": "routes.base64_converter",
